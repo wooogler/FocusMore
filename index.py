@@ -20,9 +20,9 @@ NAVBAR_STYLE = {
 }
 
 CONTENT_STYLE = {
-    "margin-left": "18rem",
-    "margin-right": "2rem",
-    "padding": "2rem 1rem",
+    "margin-left": "16rem",
+    "padding": "1rem 1rem",
+    "height": "calc(100vh - 56px)"
 }
 
 sidebar = html.Div(
@@ -56,7 +56,7 @@ app.layout = html.Div([
     sidebar,
     navbar,
     content
-])
+], style={"height": "100vh"})
 
 
 @app.callback([Output('page-title', 'brand'), Output('page-content', 'children')], [Input('url', 'pathname')])
