@@ -16,59 +16,110 @@ SIDEBAR_STYLE = {
 }
 
 NAVBAR_STYLE = {
-    'margin-left': '16rem'
+    "margin-left": "16rem",
+    "background-color": "#EBE5FC",
+    "display": "flex",
 }
 
 CONTENT_STYLE = {
     "margin-left": "16rem",
     "padding": "1rem 1rem",
-    "height": "calc(100vh - 56px)"
+    "height": "calc(100vh - 56px)",
 }
 
 sidebar = html.Div(
     [
-        dcc.Link('FocusMore', href='/', className='h3',
-                 style={'text-decoration': 'none', 'color': 'black'}),
+        dcc.Link(
+            "FocusMore",
+            href="/",
+            className="h3",
+            style={"text-decoration": "none", "color": "black"},
+        ),
         html.Hr(),
         dbc.Nav(
             [
-                dbc.NavItem(dbc.NavLink('Working Time',
-                            href='/working_time', active='exact')),
-                dbc.NavItem(dbc.NavLink(
-                    'App Usage Pattern', href='/app_usage', active='exact')),
-                dbc.NavItem(dbc.NavLink(
-                    'Suggestion', href='/suggestion', active='exact'))
+                dbc.NavItem(
+                    dbc.NavLink("Working Time", href="/working_time", active="exact")
+                ),
+                dbc.NavItem(
+                    dbc.NavLink("App Usage Pattern", href="/app_usage", active="exact")
+                ),
+                dbc.NavItem(
+                    dbc.NavLink("Suggestion", href="/suggestion", active="exact")
+                ),
             ],
             vertical=True,
             pills=True,
-        )
+        ),
     ],
-    style=SIDEBAR_STYLE
+    style=SIDEBAR_STYLE,
 )
 
-navbar = dbc.NavbarSimple(id='page-title', brand='',
-                          color='primary', dark=True, style=NAVBAR_STYLE)
+navbar2 = dbc.NavbarSimple(
+    children=[
+        html.P("Username:"),
+        dcc.Dropdown(
+            id="user-dropdown",
+            options=[{"label": "P0701", "value": "P0701"}],
+            value="P0701",
+            searchable=False,
+            clearable=False,
+            style={"width": "100px"},
+        ),
+    ],
+    id="page-title",
+    brand="",
+    color="primary",
+    dark=True,
+    style=NAVBAR_STYLE,
+)
+
+
+navbar = html.Div(
+    [
+        html.Div(className="ms-2 my-auto h4", id="page-title"),
+        html.Div(
+            [
+                html.P("Username:", className="my-auto mx-2"),
+                dcc.Dropdown(
+                    id="user-dropdown",
+                    options=[{"label": "P0701", "value": "P0701"}],
+                    value="P0701",
+                    searchable=False,
+                    clearable=False,
+                    style={"width": "100px"},
+                ),
+                html.P("Date Range:", className="my-auto mx-2"),
+                dcc.DatePickerRange(id="date-picker-range"),
+            ],
+            className="d-flex ms-auto align-items-center",
+        ),
+    ],
+    style=NAVBAR_STYLE,
+)
+
 
 content = html.Div(id="page-content", style=CONTENT_STYLE)
 
-app.layout = html.Div([
-    dcc.Location(id='url', refresh=False),
-    sidebar,
-    navbar,
-    content
-], style={"height": "100vh"})
+app.layout = html.Div(
+    [dcc.Location(id="url", refresh=False), sidebar, navbar, content],
+    style={"height": "100vh"},
+)
 
 
-@app.callback([Output('page-title', 'brand'), Output('page-content', 'children')], [Input('url', 'pathname')])
+@app.callback(
+    [Output("page-title", "children"), Output("page-content", "children")],
+    [Input("url", "pathname")],
+)
 def render_page_content(pathname):
-    if pathname == '/':
-        return ['Index', index_page.layout]
-    elif pathname == '/working_time':
-        return ['Working time', working_time.layout]
-    elif pathname == '/app_usage':
-        return ['App Usage', app_usage.layout]
-    elif pathname == '/suggestion':
-        return ['Suggestion', suggestion.layout]
+    if pathname == "/":
+        return ["Index", index_page.layout]
+    elif pathname == "/working_time":
+        return ["Working time", working_time.layout]
+    elif pathname == "/app_usage":
+        return ["App Usage", app_usage.layout]
+    elif pathname == "/suggestion":
+        return ["Suggestion", suggestion.layout]
     return dbc.Container(
         [
             html.H1("404: Not found", className="display-3"),
@@ -80,5 +131,5 @@ def render_page_content(pathname):
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run_server(port=8888, debug=True)
