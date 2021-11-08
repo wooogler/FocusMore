@@ -28,27 +28,28 @@ fig1=go.Figure(data=go.Heatmap(x=heat_df.hour+1,
                               y=heat_df.location,
                               z=heat_df.rate,
                               colorscale='Purp'))
-fig2=go.Figure(data=go.Pie(labels=['KakaoTalk','Instagram','Chrome','Slack','YouTube'], values=[25,56,32,67,32]))
+fig2=go.Figure(data=go.Pie(labels=['AppName'], values=[100], marker=dict(colors=['lightgray'])))
 layout = dbc.Container([
-    dbc.Row(html.Div(), class_name='h-15'),
     dbc.Row(
         [
             dbc.Col(html.Div([
-                html.H2("Focus Time Rate"),
-                html.P(["Summary of Focus Time Rate for selected date range.", html.Br(),
-                        "Put the cursor on each slot to check app usage percentage."]),
+                html.Div([
+                    html.H2("Focus Time Rate"),
+                    html.P(["Summary of Focus Time Rate for selected date range.", html.Br(),
+                        "Put the cursor on each slot to check app usage percentage."])
+                ]),
                 dcc.Graph(id='heatmap', figure=fig1)
             ])),
             dbc.Col(html.Div([
-                html.H2("App usage"),
-                html.Div(id='output'),
+                html.Div([
+                    html.H2("App usage"),
+                    html.Div([html.P(['Location',html.Br(),'Time'])],id='output')
+                ]),
                 dcc.Graph(id='appPie', figure=fig2)
-            ], className='text-center'),
-                )
-        ], class_name='h-70'
-    ),
-    dbc.Row(html.Div(), class_name='h-15')
-], class_name="h-100")
+            ], className='text-center'))
+        ]
+    )
+], class_name="h-75")
 
 @app.callback(
     Output('output', 'children'),
@@ -59,29 +60,30 @@ def show_data(hoverData, clickData):
         timeMid=hoverData['points'][0]['x']
         timeStart=ampm(timeMid-1)
         timeEnd=ampm(timeMid+1)
-        return [
-            f'{locationName}, {timeStart} - {timeEnd}'
-        ]
+        return [html.P([f'{locationName}',html.Br(), f'{timeStart} - {timeEnd}'])]
     else:
-        return []
+        return [html.P(['Location',html.Br(),'Time'])]
     
 @app.callback(
     Output('appPie', 'figure'),
     Input('heatmap', 'hoverData')
 )
 def update_pie(hoverData):
-    locationName=hoverData['points'][0]['y']
-    timeMid=hoverData['points'][0]['x']
-    timeStart=timeMid-1
-    timeEnd=timeMid+1
-    pie_df=app_df.loc[(app_df['time'].dt.hour >= timeStart) & (app_df['time'].dt.hour<timeEnd)]
-    pie_df=pie_df.loc[:,['name','totalTimeForeground']]
-    aggrByApp=pie_df.groupby(["name"]).max()-pie_df.groupby("name").min()
-    aggrByApp=aggrByApp.sort_values(by=["totalTimeForeground"], ascending=False)
-    aggrByApp.reset_index(level=["name"], inplace=True)
-    top5app=aggrByApp.loc[:4, :]
-    etc=aggrByApp.loc[5:, :]
-    top5app=top5app.append(pd.DataFrame([['etc', sum(etc.totalTimeForeground)]], columns=['name', 'totalTimeForeground'], index=[5]))
-    top5app=top5app.loc[top5app['totalTimeForeground']!=0]
-    fig3=px.pie(top5app, values='totalTimeForeground', names='name')
-    return fig3
+    if (hoverData is not None):
+        locationName=hoverData['points'][0]['y']
+        timeMid=hoverData['points'][0]['x']
+        timeStart=timeMid-1
+        timeEnd=timeMid+1
+        pie_df=app_df.loc[(app_df['time'].dt.hour >= timeStart) & (app_df['time'].dt.hour<timeEnd)]
+        pie_df=pie_df.loc[:,['name','totalTimeForeground']]
+        aggrByApp=pie_df.groupby(["name"]).max()-pie_df.groupby("name").min()
+        aggrByApp=aggrByApp.sort_values(by=["totalTimeForeground"], ascending=False)
+        aggrByApp.reset_index(level=["name"], inplace=True)
+        top5app=aggrByApp.loc[:4, :]
+        etc=aggrByApp.loc[5:, :]
+        top5app=top5app.append(pd.DataFrame([['etc', sum(etc.totalTimeForeground)]], columns=['name', 'totalTimeForeground'], index=[5]))
+        top5app=top5app.loc[top5app['totalTimeForeground']!=0]
+        fig3=px.pie(top5app, values='totalTimeForeground', names='name')
+        return fig3
+    else:
+        return fig2
