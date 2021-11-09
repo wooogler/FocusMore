@@ -2,8 +2,11 @@ from dash import dcc, html, Input, Output
 import dash_bootstrap_components as dbc
 from app import app
 import pandas as pd
+import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
 import json
+import random
 
 
 def generate_item(title, children="children"):
@@ -79,7 +82,13 @@ layout = dbc.Container(
                     ),
                     width=6,
                 ),
-                dbc.Col(generate_item(title="Daily time spent at Our Lab"), width=6),
+                dbc.Col(
+                    generate_item(
+                        title="Daily time spent at Our Lab",
+                        children=dcc.Graph(id="daily-chart"),
+                    ),
+                    width=6,
+                ),
             ],
             class_name="h-50",
         ),
@@ -140,48 +149,126 @@ def get_screen_time(df):
 @app.callback(
     Output("entire-chart", "figure"), Input("map-interactions", "selectedData")
 )
-def display_selected_data(selectedData):
-    if selectedData is None:
-        return
-    timestamp_list = list(
-        map(lambda point: int(point["hovertext"]), selectedData.get("points"))
-    )
-    timestamp_range = list(
-        map(
-            lambda stamp: [
-                min(stamp),
-                max(stamp),
-            ],
-            grouper(timestamp_list, 1000 * 60 * 60 * 10),
-        )
-    )
-    # print(len(timestamp_range), timestamp_range)
-    total_still_time = 0
-    total_screen_time = 0
-    total_time = 0
-    for range in timestamp_range:
-        total_time = total_time + range[1] - range[0]
-        df_act_place = df_act[df_act["timestamp"].between(range[0], range[1])]
-        df_dev_place = df_dev[df_dev["timestamp"].between(range[0], range[1])]
-        total_still_time = total_still_time + get_still_time(df_act_place)
-        total_screen_time = total_screen_time + get_screen_time(df_dev_place)
-    # 여기 나중에 해결하기
-    print(total_time / (1000 * 60 * 60))
-    print(total_still_time / (1000 * 60 * 60))
-    print(total_screen_time / (1000 * 60 * 60))
-    focus_time = total_still_time - total_screen_time
-    leisure_time = total_time - total_still_time
-    wasting_time = total_screen_time
+def update_entire_chart(selectedData):
+    # if selectedData is None:
+    #     return
+    # timestamp_list = list(
+    #     map(lambda point: int(point["hovertext"]), selectedData.get("points"))
+    # )
+    # timestamp_range = list(
+    #     map(
+    #         lambda stamp: [
+    #             min(stamp),
+    #             max(stamp),
+    #         ],
+    #         grouper(timestamp_list, 1000 * 60 * 60 * 10),
+    #     )
+    # )
+    # # print(len(timestamp_range), timestamp_range)
+    # total_still_time = 0
+    # total_screen_time = 0
+    # total_time = 0
+    # for range in timestamp_range:
+    #     total_time = total_time + range[1] - range[0]
+    #     df_act_place = df_act[df_act["timestamp"].between(range[0], range[1])]
+    #     df_dev_place = df_dev[df_dev["timestamp"].between(range[0], range[1])]
+    #     total_still_time = total_still_time + get_still_time(df_act_place)
+    #     total_screen_time = total_screen_time + get_screen_time(df_dev_place)
+    # # 여기 나중에 해결하기
+    # print(total_time / (1000 * 60 * 60))
+    # print(total_still_time / (1000 * 60 * 60))
+    # print(total_screen_time / (1000 * 60 * 60))
+    # focus_time = total_still_time - total_screen_time
+    # leisure_time = total_time - total_still_time
+    # wasting_time = total_screen_time
     df_entire = pd.DataFrame(
         pd.Series(
             {
-                "Focus Time": focus_time,
-                "Wasting Time": wasting_time,
-                "Leisure Time": leisure_time,
+                "Focus Time": 24.2,
+                "Wasting Time": 4.2,
+                "Leisure Time": 6.5,
             }
         ),
         columns=["time"],
     )
-    fig = px.pie(df_entire, values="time", names=df_entire.index)
+    fig = go.Figure(
+        data=[go.Pie(labels=df_entire.index, values=df_entire["time"], sort=False)]
+    )
+    fig.update_traces(
+        marker=dict(colors=["#0D6EFD", "#DC3545", "#ADB5BD"]),
+        textinfo="percent+label",
+        showlegend=False,
+    )
+    fig.update_layout(
+        margin={"r": 0, "t": 50, "l": 0, "b": 100},
+    )
     # pie 차트 안 나옴
+    return fig
+
+
+@app.callback(
+    Output("daily-chart", "figure"), Input("map-interactions", "selectedData")
+)
+def update_daily_chart(selectedData):
+    # if selectedData is None:
+    #     return
+    # timestamp_list = list(
+    #     map(lambda point: int(point["hovertext"]), selectedData.get("points"))
+    # )
+    # timestamp_range = list(
+    #     map(
+    #         lambda stamp: [
+    #             pd.to_datetime(min(stamp), unit="ms"),
+    #             pd.to_datetime(max(stamp), unit="ms"),
+    #         ],
+    #         grouper(timestamp_list, 1000 * 60 * 60 * 10),
+    #     )
+    # )
+    # print(timestamp_range)
+    datetime_range = pd.date_range(start="2021-4-5", end="2021-4-10")
+    df_daily = pd.DataFrame(
+        {
+            "day": datetime_range,
+            "Working Time": np.random.uniform(5, 10, size=(len(datetime_range),)),
+            "Wasting Time": np.random.uniform(0, 2, size=(len(datetime_range),)),
+            "Leisure Time": np.random.uniform(1, 4, size=(len(datetime_range),)),
+        }
+    )
+    fig = go.Figure()
+    df_total_time = (
+        df_daily["Working Time"] + df_daily["Wasting Time"] + df_daily["Leisure Time"]
+    )
+    df_working_ratio = df_daily["Working Time"] / df_total_time * 100
+    fig.add_trace(
+        go.Bar(
+            x=df_daily["day"],
+            y=df_daily["Working Time"],
+            name="Working Time",
+            textfont={"size": 11},
+            text=df_daily["Working Time"].round(1).astype(str)
+            + "h<br>("
+            + df_working_ratio.round(1).astype(str)
+            + "%)",
+        )
+    )
+    fig.add_trace(
+        go.Bar(
+            x=df_daily["day"],
+            y=df_daily["Wasting Time"],
+            name="Wasting Time",
+            marker_color="#DC3545",
+        )
+    )
+    fig.add_trace(
+        go.Bar(
+            x=df_daily["day"],
+            y=df_daily["Leisure Time"],
+            name="Leisure Time",
+            marker_color="#ADB5BD",
+            text=df_total_time.round(1).astype(str) + "h",
+            textposition="outside",
+        )
+    )
+    fig.update_layout(barmode="stack", margin={"r": 0, "t": 0, "l": 0, "b": 100})
+
     return fig
