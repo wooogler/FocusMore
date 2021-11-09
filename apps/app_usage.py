@@ -4,11 +4,10 @@ from app import app
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
 focus_df = pd.read_csv('data/FocusRate.csv')
-pie1=go.Figure(data=go.Pie(labels=['Youtube','Instagram','KaKaoTalk','Netflix','Chrome','Others'], values=[30,25,17,10,4,14]))
-pie2=go.Figure(data=go.Pie(labels=['Slack','Music','Notion','Message','Chrome','Others'], values=[38,29,18,9,6,10]))
+
+app_df = pd.read_csv('data/AppPie.csv')
 
 layout = dbc.Container([
     dbc.Row([
@@ -36,21 +35,21 @@ layout = dbc.Container([
     dbc.Row([
         dbc.Col(
             html.Div([
-                html.H2("Distracting Apps"),
+                html.Div([html.H2("Distracting Apps"),
                 html.P([
                     "The top 5 apps that are used most frequently ", html.Br(),
-                    "when you have ", html.I("Low Focus Time Rate")
-                ]),
-                dcc.Graph(id='appPie1', figure=pie1)
+                    "when you have ", html.I("Low Focus Time Rate")])
+                ], style={"border-color": "mediumpurple" ,"border":" solid 0.1em", "border-radius" : "10px"}),
+                dcc.Graph(id='appPie1')
             ])),
         dbc.Col(
              html.Div([
-                html.H2("Not Disturbing Apps"),
+                html.Div([html.H2("Not Disturbing Apps"),
                 html.P([
                     "The top 5 apps that are used most frequently ", html.Br(),
-                    "when you have ", html.I("High Focus Time Rate")
-                ]),
-                dcc.Graph(id='appPie2', figure=pie2)
+                    "when you have ", html.I("High Focus Time Rate")])
+                ], style={"border-color": "lightgray" ,"border":" solid 0.1em", "border-radius" : "10px"}),
+                dcc.Graph(id='appPie2')
             ])),
     ], class_name = "h-35", style={"text-align": "center"})   
 ], class_name = "h-100")
@@ -71,12 +70,57 @@ def update_bar_graph(selectedValue):
     colors = {'High': 'lightgray', 'Low': 'mediumpurple'}
     labels = {'High': 'High Focus Rate', 'Low': 'Low Focus Rate'}
     
-    bars = []
+    fig=go.Figure()
+
     for label, label_df in df.groupby('Label'):
-        bars.append(go.Bar(x=label_df.Hour ,y=label_df.FocusRate, name=labels[label], marker={'color': colors[label]}))
-    fig_bar=go.Figure(data=bars)
-    fig_bar.update_layout(
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)'
-    )
-    return fig_bar
+
+        fig.add_trace(go.Bar(
+                x=label_df.Hour,
+                y=label_df.FocusRate, 
+                name=labels[label], 
+                marker={'color': colors[label]}))
+
+    fig.add_trace(go.Scatter(
+                x= [df.Hour.min()-1, df.Hour.max()+1],
+                y=[ meanVal,meanVal],
+                name = 'Mean',
+                mode = 'lines',
+                showlegend = False,
+                marker = {'color': 'darkgray'}
+                ))        
+    fig.layout.plot_bgcolor = '#fff'
+    fig.layout.paper_bgcolor = '#fff'
+
+    return fig
+
+@app.callback(
+    Output('appPie1','figure'),
+    Input('selectDay','value')
+)
+def update_pie1_graph(selectedValue):
+    df = app_df.loc[app_df['Label'] == 'Low']
+    if selectedValue == "Day":
+        df = df.groupby('AppName').mean()
+        df.reset_index(level='AppName', inplace=True)
+    else:
+        df = df[df['Day'] == selectedValue]
+    fig = go.Figure()
+    fig.add_trace(go.Pie(labels=df['AppName'], values=df['Rate']))
+    
+    return fig
+
+@app.callback(
+    Output('appPie2','figure'),
+    Input('selectDay','value')
+)
+def update_pie1_graph(selectedValue):
+    df = app_df.loc[app_df['Label'] == 'High']
+    if selectedValue == "Day":
+        df = df.groupby('AppName').mean()
+        df.reset_index(level='AppName', inplace=True)
+    else:
+        df = df[df['Day'] == selectedValue]
+    fig = go.Figure()
+    fig.add_trace(go.Pie(labels=df['AppName'], values=df['Rate']))
+
+    return fig
