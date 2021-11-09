@@ -7,7 +7,6 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 focus_df = pd.read_csv('data/FocusRate.csv')
-
 pie1=go.Figure(data=go.Pie(labels=['Youtube','Instagram','KaKaoTalk','Netflix','Chrome','Others'], values=[30,25,17,10,4,14]))
 pie2=go.Figure(data=go.Pie(labels=['Slack','Music','Notion','Message','Chrome','Others'], values=[38,29,18,9,6,10]))
 
@@ -58,30 +57,26 @@ layout = dbc.Container([
 
 @app.callback(
     Output('FocusBar','figure'),
-    Input('selectDay','selectedValue')
+    Input('selectDay','value')
 )
 def update_bar_graph(selectedValue):
     if selectedValue == "Day":
         df = focus_df.groupby('Hour').mean()
+        
         df.reset_index(level='Hour', inplace=True)
     else:
         df = focus_df[focus_df['Day'] == selectedValue]
-    
     meanVal = df['FocusRate'].mean()
     df['Label'] = df['FocusRate'].apply(lambda x: 'High' if x> meanVal else 'Low')  
-    
     colors = {'High': 'lightgray', 'Low': 'mediumpurple'}
     labels = {'High': 'High Focus Rate', 'Low': 'Low Focus Rate'}
     
     bars = []
     for label, label_df in df.groupby('Label'):
         bars.append(go.Bar(x=label_df.Hour ,y=label_df.FocusRate, name=labels[label], marker={'color': colors[label]}))
-    
-    return {
-        'data': bars,
-        'layout':
-            go.Layout(
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)'
-            )
-    }
+    fig_bar=go.Figure(data=bars)
+    fig_bar.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)'
+    )
+    return fig_bar
