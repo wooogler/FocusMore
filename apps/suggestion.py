@@ -23,12 +23,25 @@ def ampm(x):
         res='0AM'
     return res
 
+def cutname(y):
+    if len(y)<11:
+        return y
+    else:
+        return y.split()[-1]
 
 fig1=go.Figure(data=go.Heatmap(x=heat_df.hour+1,
                               y=heat_df.location,
                               z=heat_df.rate,
+                              hovertemplate=
+                              '%{y}<br>'+
+                              '%{z:d}%<extra></extra>',
                               colorscale='Purp'))
+fig1.update_layout(title="Focus time rate = Focus time/Total time spent", title_x=0.5)
+fig1.update_xaxes(dtick=2,title_text='time(h)')
+fig1.update_yaxes(title_text='place')
+
 fig2=go.Figure(data=go.Pie(labels=['AppName'], values=[100], marker=dict(colors=['lightgray'])))
+fig2.update_layout(legend=dict(orientation='h', xanchor='center', x=0.5))
 layout = dbc.Container([
     dbc.Row(
         [
@@ -37,19 +50,19 @@ layout = dbc.Container([
                     html.H2("Focus Time Rate"),
                     html.P(["Summary of Focus Time Rate for selected date range.", html.Br(),
                         "Put the cursor on each slot to check app usage percentage."])
-                ]),
+                ], style={'margin-top':'10%'}),
                 dcc.Graph(id='heatmap', figure=fig1)
             ])),
             dbc.Col(html.Div([
                 html.Div([
                     html.H2("App usage"),
                     html.Div([html.P(['Location',html.Br(),'Time'])],id='output')
-                ]),
-                dcc.Graph(id='appPie', figure=fig2)
+                ], style={'margin-top':'10%'}),
+                html.Div(dcc.Graph(id='appPie', figure=fig2))
             ], className='text-center'))
         ]
     )
-], class_name="h-75")
+], class_name="h-100")
 
 @app.callback(
     Output('output', 'children'),
@@ -80,10 +93,18 @@ def update_pie(hoverData):
         aggrByApp=aggrByApp.sort_values(by=["totalTimeForeground"], ascending=False)
         aggrByApp.reset_index(level=["name"], inplace=True)
         top5app=aggrByApp.loc[:4, :]
+        top5app['name']=top5app['name'].apply(lambda x: cutname(x))
         etc=aggrByApp.loc[5:, :]
         top5app=top5app.append(pd.DataFrame([['etc', sum(etc.totalTimeForeground)]], columns=['name', 'totalTimeForeground'], index=[5]))
         top5app=top5app.loc[top5app['totalTimeForeground']!=0]
-        fig3=px.pie(top5app, values='totalTimeForeground', names='name')
+        fig3=go.Figure(data=[go.Pie(labels=top5app.name, values=top5app.totalTimeForeground,textinfo='percent',insidetextorientation='radial')])
+        # px.pie(top5app, values='totalTimeForeground', names='name', insidetextorientation='radial')
+        fig3.update_layout(legend=dict(
+            orientation='h',
+            xanchor='center',
+            x=0.5
+            )
+        )
         return fig3
     else:
         return fig2
