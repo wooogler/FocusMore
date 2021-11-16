@@ -2,7 +2,7 @@ import dash
 from dash import dcc, html, Input, Output
 import dash_bootstrap_components as dbc
 
-from app import app
+from app import app, server
 from apps import app_usage, working_time, suggestion, index_page
 
 SIDEBAR_STYLE = {
@@ -103,7 +103,7 @@ content = html.Div(id="page-content", style=CONTENT_STYLE)
 
 app.layout = html.Div(
     [dcc.Location(id="url", refresh=False), sidebar, navbar, content],
-    style={"height": "100vh"},
+    style={"height": "100vh"}, id='index-layout'
 )
 
 
@@ -130,6 +130,11 @@ def render_page_content(pathname):
         className="py-3",
     )
 
-
+# @app.callback(
+#     Output("index-layout", "children"),
+#     Input("app-layout", "children")
+# )
+# def set_layout(lo):
+#     return lo
 if __name__ == "__main__":
     app.run_server(port=8888, debug=True)
