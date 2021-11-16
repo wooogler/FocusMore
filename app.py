@@ -131,12 +131,7 @@ def render_page_content(pathname):
         className="py-3",
     )
 
-@app.callback(
-    Output("index-layout", "children"),
-    Input("app-layout", "children")
-)
-def set_layout(lo):
-    return lo
+
 if __name__ == "__main__":
     app.run_server(port=8888, debug=True)
-# server = app.server
+server = app.server
