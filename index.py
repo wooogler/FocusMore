@@ -4,7 +4,7 @@ import dash_bootstrap_components as dbc
 
 from app import app
 from apps import app_usage, working_time, suggestion, index_page
-
+app=dash.Dash(__name__)
 SIDEBAR_STYLE = {
     "position": "fixed",
     "top": 0,
