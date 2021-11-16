@@ -2,6 +2,8 @@ import dash
 import dash_bootstrap_components as dbc
 from dash import dcc, html, Input, Output
 import dash_bootstrap_components as dbc
+from apps import app_usage, working_time, suggestion, index_page
+
 app = dash.Dash(__name__, suppress_callback_exceptions=True,
                 external_stylesheets=[dbc.themes.BOOTSTRAP])
 SIDEBAR_STYLE = {
