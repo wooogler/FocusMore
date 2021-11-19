@@ -1,4 +1,4 @@
-import dash
+import os
 from dash import dcc, html, Input, Output
 import dash_bootstrap_components as dbc
 
@@ -55,25 +55,8 @@ sidebar = html.Div(
     style=SIDEBAR_STYLE,
 )
 
-navbar2 = dbc.NavbarSimple(
-    children=[
-        html.P("Username:"),
-        dcc.Dropdown(
-            id="user-dropdown",
-            options=[{"label": "P0701", "value": "P0701"}],
-            value="P0701",
-            searchable=False,
-            clearable=False,
-            style={"width": "100px"},
-        ),
-    ],
-    id="page-title",
-    brand="",
-    color="primary",
-    dark=True,
-    style=NAVBAR_STYLE,
-)
-
+user_list = os.listdir(os.path.join(os.getcwd(), 'user_data'))
+user_list.sort()
 
 navbar = html.Div(
     [
@@ -83,7 +66,7 @@ navbar = html.Div(
                 html.P("Username:", className="my-auto mx-2"),
                 dcc.Dropdown(
                     id="user-dropdown",
-                    options=[{"label": "P0701", "value": "P0701"}],
+                    options=[{'label': x, 'value': x} for x in user_list],
                     value="P0701",
                     searchable=False,
                     clearable=False,
