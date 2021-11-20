@@ -1,6 +1,7 @@
 from collections import defaultdict
 from datetime import datetime, timedelta, date
-from dash import dcc, html, Input, Output
+from dash import dcc, html, State, Output, Input
+from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from app import app
 import pandas as pd
@@ -9,8 +10,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 import os
 import glob
-import json
-import random
 
 
 def generate_item(title, children="children"):
@@ -34,8 +33,6 @@ def get_table_body(places):
     return [html.Tbody(list(map(get_row, places)))]
 
 
-
-
 layout = dbc.Container(
     [
         dbc.Row(
@@ -53,8 +50,19 @@ layout = dbc.Container(
                 dbc.Col(
                     generate_item(
                         title="My working places",
-                        children=dbc.Table(
-                            table_header + get_table_body(places), bordered=True
+                        children=html.Div(
+                            [
+                                dcc.RadioItems(
+                                    options=[],
+                                    id="place-select",
+                                    style={
+                                        "display": "flex",
+                                        "flex-direction": "column",
+                                    },
+                                ),
+                                dcc.Input(id="place-name-state", type="text"),
+                                html.Button(id="add-place-state", children="Add"),
+                            ]
                         ),
                     ),
                     width=6,
@@ -87,18 +95,45 @@ layout = dbc.Container(
 
 
 @app.callback(
+    [Output("places", "data"), Output("place-select", "options")],
+    Input("place-select", "value"),
+    Input("location-map", "selectedData"),
+    Input("add-place-state", "n_clicks"),
+    State("place-name-state", "value"),
+    State("places", "data"),
+)
+def on_add_place(place, selectedData, n_clicks, place_name, places):
+    if n_clicks is None:
+        raise PreventUpdate
+
+    places = places or []
+    place_list = [x["name"] for x in places]
+    if place_name not in place_list:
+        places.append({"name": place_name, "selectedData": None})
+
+    options = [{"label": place["name"], "value": place["name"]} for place in places]
+
+    if selectedData is not None or place is not None:
+        selected = next((x for x in places if x["name"] == place), None)
+        if selected is not None:
+            selected["selectedData"] = selectedData
+    return [places, options]
+
+
+@app.callback(
     [
         Output("location-map", "figure"),
         Output("date-picker-range", "min_date_allowed"),
         Output("date-picker-range", "max_date_allowed"),
     ],
-    [
-        Input("user-dropdown", "value"),
-        Input("date-picker-range", "start_date"),
-        Input("date-picker-range", "end_date"),
-    ],
+    Input("user-dropdown", "value"),
+    Input("date-picker-range", "start_date"),
+    Input("date-picker-range", "end_date"),
+    Input("place-select", "value"),
+    Input("location-map", "selectedData"),
+    State("places", "data"),
 )
-def update_figure(user_name, start_date, end_date):
+def update_map(user_name, start_date, end_date, place, places, selectedData):
     loc_files = glob.glob(
         os.path.join(os.getcwd(), "user_data", user_name, "LocationEntity-*.csv")
     )
@@ -130,6 +165,27 @@ def update_figure(user_name, start_date, end_date):
         margin={"r": 0, "t": 0, "l": 0, "b": 0}, dragmode="select", hovermode=False
     )
     fig_loc.update_traces(unselected={"marker": {"opacity": 0.2}})
+
+    if places is not None and place is not None:
+        selected = next((x for x in places if x["name"] == place), None)
+        if selected is not None:
+            print(selected)
+            area = selected["selectedData"].range.mapbox
+            selection_bounds = {
+                "x0": area[0][0],
+                "x1": area[1][0],
+                "y0": area[0][1],
+                "y1": area[1][1],
+            }
+            fig_loc.add_shape(
+                dict(
+                    {
+                        "type": "rect",
+                        "line": {"width": 1, "dash": "dot", "color": "darkgrey"},
+                        **selection_bounds,
+                    }
+                )
+            )
 
     return [fig_loc, min_date, max_date]
 

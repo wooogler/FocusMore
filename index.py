@@ -55,7 +55,7 @@ sidebar = html.Div(
     style=SIDEBAR_STYLE,
 )
 
-user_list = os.listdir(os.path.join(os.getcwd(), 'user_data'))
+user_list = os.listdir(os.path.join(os.getcwd(), "user_data"))
 user_list.sort()
 
 navbar = html.Div(
@@ -66,7 +66,7 @@ navbar = html.Div(
                 html.P("Username:", className="my-auto mx-2"),
                 dcc.Dropdown(
                     id="user-dropdown",
-                    options=[{'label': x, 'value': x} for x in user_list],
+                    options=[{"label": x, "value": x} for x in user_list],
                     value="P0701",
                     searchable=False,
                     clearable=False,
@@ -85,7 +85,13 @@ navbar = html.Div(
 content = html.Div(id="page-content", style=CONTENT_STYLE)
 
 app.layout = html.Div(
-    [dcc.Location(id="url", refresh=False), sidebar, navbar, content],
+    [
+        dcc.Store(id="places", storage_type="session"),
+        dcc.Location(id="url", refresh=False),
+        sidebar,
+        navbar,
+        content,
+    ],
     style={"height": "100vh"},
 )
 
