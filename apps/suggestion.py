@@ -106,9 +106,9 @@ layout = dbc.Container(
     [Input("heatmap", "hoverData"), Input("heatmap", "clickData")],
 )
 def show_data(hoverData, clickData):
-    if hoverData is not None:
-        locationName = hoverData["points"][0]["y"]
-        timeMid = hoverData["points"][0]["x"]
+    if clickData is not None:
+        locationName = clickData["points"][0]["y"]
+        timeMid = clickData["points"][0]["x"]
         timeStart = ampm(timeMid - 1)
         timeEnd = ampm(timeMid + 1)
         return [html.P([f"{locationName}", html.Br(), f"{timeStart} - {timeEnd}"])]
@@ -116,8 +116,13 @@ def show_data(hoverData, clickData):
         return [html.P(["Location", html.Br(), "Time"])]
 
 
-@app.callback(Output("appPie", "figure"), Input("heatmap", "clickData"), Input("user-dropdown", "value"),)
-def update_pie(clickData, user_name):
+@app.callback(Output("appPie", "figure"), 
+              Input("heatmap", "clickData"), 
+              Input("user-dropdown", "value"),
+              Input("date-picker-range", "start_date"),
+              Input("date-picker-range", "end_date"),
+)
+def update_pie(clickData, user_name,start_date, end_date):
     # in response to username change
     app_files = glob.glob(
             os.path.join(os.getcwd(), "user_data", user_name, "AppUsageStatEntity-*.csv")
@@ -127,7 +132,7 @@ def update_pie(clickData, user_name):
     app_df = app_df.sort_values(["timestamp"], ascending=True)
     app_df["time"] = pd.to_datetime(app_df["timestamp"], unit="ms")
     app_df = app_df.loc[:, ["time", "name", "startTime", "endTime", "totalTimeForeground"]]
-    
+    app_byname=app_df.groupby(["name"])
     if clickData is not None: # in response to heatmap click
 
         locationName = clickData["points"][0]["y"]
@@ -151,14 +156,18 @@ def update_pie(clickData, user_name):
                 index=[5],
             )
         )
+        top5app["totalMin"]=top5app["totalTimeForeground"]/60000
         top5app = top5app.loc[top5app["totalTimeForeground"] != 0]
         fig3 = go.Figure(
             data=[
                 go.Pie(
                     labels=top5app.name,
-                    values=top5app.totalTimeForeground,
+                    values=top5app.totalMin,
                     textinfo="percent",
+                    hoverinfo="label+value",
                     insidetextorientation="radial",
+                    direction="clockwise",
+                    sort=False
                 )
             ]
         )
