@@ -5,6 +5,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 from app import app
 import json
+import os
+import glob
 
 heat_df = pd.read_csv("data/heat.csv")
 app_df = pd.read_csv("data/AppUsageStatEntity-5572736000.csv")
@@ -114,11 +116,22 @@ def show_data(hoverData, clickData):
         return [html.P(["Location", html.Br(), "Time"])]
 
 
-@app.callback(Output("appPie", "figure"), Input("heatmap", "hoverData"))
-def update_pie(hoverData):
-    if hoverData is not None:
-        locationName = hoverData["points"][0]["y"]
-        timeMid = hoverData["points"][0]["x"]
+@app.callback(Output("appPie", "figure"), Input("heatmap", "clickData"), Input("user-dropdown", "value"),)
+def update_pie(clickData, user_name):
+    # in response to username change
+    app_files = glob.glob(
+            os.path.join(os.getcwd(), "user_data", user_name, "AppUsageStatEntity-*.csv")
+    )
+    df_app_files = (pd.read_csv(f) for f in app_files)
+    app_df = pd.concat(df_app_files, ignore_index=True)
+    app_df = app_df.sort_values(["timestamp"], ascending=True)
+    app_df["time"] = pd.to_datetime(app_df["timestamp"], unit="ms")
+    app_df = app_df.loc[:, ["time", "name", "startTime", "endTime", "totalTimeForeground"]]
+    
+    if clickData is not None: # in response to heatmap click
+
+        locationName = clickData["points"][0]["y"]
+        timeMid = clickData["points"][0]["x"]
         timeStart = timeMid - 1
         timeEnd = timeMid + 1
         pie_df = app_df.loc[
@@ -129,7 +142,7 @@ def update_pie(hoverData):
         aggrByApp = aggrByApp.sort_values(by=["totalTimeForeground"], ascending=False)
         aggrByApp.reset_index(level=["name"], inplace=True)
         top5app = aggrByApp.loc[:4, :]
-        top5app["name"] = top5app["name"].apply(lambda x: cutname(x))
+        top5app.loc["name"] = top5app["name"].apply(lambda x: cutname(x))
         etc = aggrByApp.loc[5:, :]
         top5app = top5app.append(
             pd.DataFrame(
