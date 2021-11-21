@@ -34,7 +34,7 @@ layout = dbc.Container(
                                      html.Td(html.B("Leisure Time"), style={'width':'125px'}),
                                      html.Td("The time when you are moving in the working place")]),
                             html.Tr([html.Td("■", style={'color':'red', 'width':'25px'}),
-                                     html.Td(html.B("Wasing Time"), style={'width':'125px'}),
+                                     html.Td(html.B("Wasting Time"), style={'width':'125px'}),
                                      html.Td("The time when you are sitting on the chair and using your smartphone")]),
                             html.Tr([html.Td("■", style={'color':'blue', 'width':'25px'}),
                                      html.Td(html.B("Focus Time"), style={'width':'125px'}),
