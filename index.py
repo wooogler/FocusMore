@@ -12,17 +12,17 @@ SIDEBAR_STYLE = {
     "bottom": 0,
     "width": "16rem",
     "padding": "2rem 1rem",
-    "background-color": "#f8f9fa",
+    "backgroundColor": "#f8f9fa",
 }
 
 NAVBAR_STYLE = {
-    "margin-left": "16rem",
-    "background-color": "#EBE5FC",
+    "marginLeft": "16rem",
+    "backgroundColor": "#EBE5FC",
     "display": "flex",
 }
 
 CONTENT_STYLE = {
-    "margin-left": "16rem",
+    "marginLeft": "16rem",
     "padding": "1rem 1rem",
     "height": "calc(100vh - 56px)",
 }
@@ -33,7 +33,7 @@ sidebar = html.Div(
             "FocusMore",
             href="/",
             className="h3",
-            style={"text-decoration": "none", "color": "black"},
+            style={"textDecoration": "none", "color": "black"},
         ),
         html.Hr(),
         dbc.Nav(
@@ -87,6 +87,7 @@ content = html.Div(id="page-content", style=CONTENT_STYLE)
 app.layout = html.Div(
     [
         dcc.Store(id="places", storage_type="session"),
+        dcc.Store(id="place-areas", storage_type="session"),
         dcc.Location(id="url", refresh=False),
         sidebar,
         navbar,

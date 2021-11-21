@@ -1,6 +1,6 @@
 from collections import defaultdict
 from datetime import datetime, timedelta, date
-from dash import dcc, html, State, Output, Input
+from dash import dcc, html, State, Output, Input, callback_context
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from app import app
@@ -52,16 +52,21 @@ layout = dbc.Container(
                         title="My working places",
                         children=html.Div(
                             [
+                                dcc.Input(id="place-name-state", type="text"),
+                                html.Button(id="add-place-state", children="Add"),
+                                html.Button(id="delete-place", children="Delete"),
                                 dcc.RadioItems(
                                     options=[],
                                     id="place-select",
                                     style={
                                         "display": "flex",
-                                        "flex-direction": "column",
+                                        "flexDirection": "column",
+                                    },
+                                    inputStyle={
+                                        "marginRight": "1rem",
+                                        "marginTop": "0.5rem",
                                     },
                                 ),
-                                dcc.Input(id="place-name-state", type="text"),
-                                html.Button(id="add-place-state", children="Add"),
                             ]
                         ),
                     ),
@@ -96,28 +101,61 @@ layout = dbc.Container(
 
 @app.callback(
     [Output("places", "data"), Output("place-select", "options")],
-    Input("place-select", "value"),
-    Input("location-map", "selectedData"),
     Input("add-place-state", "n_clicks"),
+    Input("delete-place", "n_clicks"),
     State("place-name-state", "value"),
     State("places", "data"),
+    State("place-select", "value"),
 )
-def on_add_place(place, selectedData, n_clicks, place_name, places):
-    if n_clicks is None:
+def on_add_place(add_btn, delete_btn, place_name, places, selected_place):
+    if place_name == "" or place_name is None:
         raise PreventUpdate
 
+    ctx = callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+    else:
+        button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+    print(button_id)
+
     places = places or []
-    place_list = [x["name"] for x in places]
-    if place_name not in place_list:
-        places.append({"name": place_name, "selectedData": None})
 
-    options = [{"label": place["name"], "value": place["name"]} for place in places]
+    if button_id == "add-place-state":
+        if place_name not in places:
+            places.append(place_name)
 
-    if selectedData is not None or place is not None:
-        selected = next((x for x in places if x["name"] == place), None)
-        if selected is not None:
-            selected["selectedData"] = selectedData
+    elif button_id == "delete-place":
+        if selected_place in places:
+            places.remove(selected_place)
+
+    options = [{"label": place, "value": place} for place in places]
+
     return [places, options]
+
+
+@app.callback(
+    [Output("place-areas", "data")],
+    Input("location-map", "selectedData"),
+    State("place-select", "value"),
+    State("place-areas", "data"),
+)
+def update_place_areas(selectedData, selected_place, place_areas):
+    place_areas = place_areas or {}
+    place_areas[selected_place] = selectedData
+    return [place_areas]
+
+
+def extract_df(df, start_date, end_date):
+    if start_date is not None:
+        start_date_timestamp = datetime.fromisoformat(start_date).timestamp() * 1000
+        df = df.loc[start_date_timestamp <= df["timestamp"]]
+    if end_date is not None:
+        end_date_timestamp = (
+            datetime.fromisoformat(end_date) + timedelta(days=1)
+        ).timestamp() * 1000
+        df = df.loc[df["timestamp"] < end_date_timestamp]
+    return df
 
 
 @app.callback(
@@ -125,15 +163,15 @@ def on_add_place(place, selectedData, n_clicks, place_name, places):
         Output("location-map", "figure"),
         Output("date-picker-range", "min_date_allowed"),
         Output("date-picker-range", "max_date_allowed"),
+        Output("location-map", "selectedData"),
     ],
     Input("user-dropdown", "value"),
     Input("date-picker-range", "start_date"),
     Input("date-picker-range", "end_date"),
     Input("place-select", "value"),
-    Input("location-map", "selectedData"),
-    State("places", "data"),
+    State("place-areas", "data"),
 )
-def update_map(user_name, start_date, end_date, place, places, selectedData):
+def update_map(user_name, start_date, end_date, selected_place, place_areas):
     loc_files = glob.glob(
         os.path.join(os.getcwd(), "user_data", user_name, "LocationEntity-*.csv")
     )
@@ -144,50 +182,24 @@ def update_map(user_name, start_date, end_date, place, places, selectedData):
     max_date = (
         date.fromtimestamp(max(df_loc["timestamp"]) / 1000) + timedelta(days=1)
     ).isoformat()
-    if start_date is not None:
-        start_date_timestamp = datetime.fromisoformat(start_date).timestamp() * 1000
-        df_loc = df_loc.loc[start_date_timestamp <= df_loc["timestamp"]]
-    if end_date is not None:
-        end_date_timestamp = (
-            datetime.fromisoformat(end_date) + timedelta(days=1)
-        ).timestamp() * 1000
-        df_loc = df_loc.loc[df_loc["timestamp"] < end_date_timestamp]
+    df_loc = extract_df(df_loc, start_date, end_date)
 
     fig_loc = px.scatter_mapbox(
-        df_loc,
-        lat="latitude",
-        lon="longitude",
-        hover_name="timestamp",
+        lat=df_loc.latitude,
+        lon=df_loc.longitude,
+        hover_name=pd.to_datetime(df_loc.timestamp, unit="ms"),
         zoom=13,
     )
     fig_loc.update_layout(mapbox_style="open-street-map")
-    fig_loc.update_layout(
-        margin={"r": 0, "t": 0, "l": 0, "b": 0}, dragmode="select", hovermode=False
-    )
-    fig_loc.update_traces(unselected={"marker": {"opacity": 0.2}})
+    fig_loc.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0}, dragmode="pan")
+    fig_loc.update_traces(selected={"marker": {"opacity": 0.2, "color": "red"}})
+    selectedData = None
+    if selected_place is not None and selected_place in place_areas:
+        selectedData = place_areas[selected_place]
+        selectedpoints = [x["pointIndex"] for x in selectedData["points"]]
+        fig_loc.update_traces(selectedpoints=selectedpoints)
 
-    if places is not None and place is not None:
-        selected = next((x for x in places if x["name"] == place), None)
-        if selected is not None:
-            print(selected)
-            area = selected["selectedData"].range.mapbox
-            selection_bounds = {
-                "x0": area[0][0],
-                "x1": area[1][0],
-                "y0": area[0][1],
-                "y1": area[1][1],
-            }
-            fig_loc.add_shape(
-                dict(
-                    {
-                        "type": "rect",
-                        "line": {"width": 1, "dash": "dot", "color": "darkgrey"},
-                        **selection_bounds,
-                    }
-                )
-            )
-
-    return [fig_loc, min_date, max_date]
+    return [fig_loc, min_date, max_date, selectedData]
 
 
 def grouper(list_, threshold):
@@ -225,8 +237,12 @@ def ranges_to_time(ranges):
     [Output("entire-chart", "figure"), Output("daily-chart", "figure")],
     Input("location-map", "selectedData"),
     Input("user-dropdown", "value"),
+    Input("date-picker-range", "start_date"),
+    Input("date-picker-range", "end_date"),
 )
-def update_entire_chart(selectedData, user_name):
+def update_entire_chart(selectedData, user_name, start_date, end_date):
+    if selectedData is None:
+        return [{}, {}]
     timestamp_list = list(
         map(lambda point: int(point["hovertext"]), selectedData.get("points"))
     )
@@ -247,6 +263,7 @@ def update_entire_chart(selectedData, user_name):
         ["timestamp"], keep="last"
     )
     df_act = df_act.sort_values(["timestamp"]).reset_index(drop=True)
+    df_act = extract_df(df_act, start_date, end_date)
 
     dev_files = glob.glob(
         os.path.join(os.getcwd(), "user_data", user_name, "DeviceEventEntity-*.csv")
@@ -256,6 +273,7 @@ def update_entire_chart(selectedData, user_name):
     df_dev = df_dev.drop_duplicates(["timestamp", "type"], keep="first")
     df_dev = df_dev.loc[df_dev["type"].isin(["SCREEN_ON", "SCREEN_OFF"])]
     df_dev = df_dev.sort_values(["timestamp"]).reset_index(drop=True)
+    df_dev = extract_df(df_act, start_date, end_date)
 
     total_still_time = 0
     total_not_still_time = 0
