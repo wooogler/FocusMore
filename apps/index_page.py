@@ -5,8 +5,8 @@ layout = dbc.Container(
     [
         dbc.Row(
             [
-                dbc.Col(html.Div(html.B("Select Username"), style={"background-color":"mediumpurple", "color":"white"}), width="auto"),
-                dbc.Col(html.Div(html.B("Selct Date Range"), style={"background-color":"mediumpurple", "color":"white"}), width={"size":"auto", "offset":1})
+                dbc.Col(html.Div(html.B("Select Username"), style={"backgroundColor":"mediumpurple", "color":"white"}), width="auto"),
+                dbc.Col(html.Div(html.B("Selct Date Range"), style={"backgroundColor":"mediumpurple", "color":"white"}), width={"size":"auto", "offset":1})
             ],
             justify="end"
         ),

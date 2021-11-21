@@ -96,6 +96,18 @@ app.layout = html.Div(
     style={"height": "100vh"},
 )
 
+app.validation_layout = html.Div(
+    [
+        sidebar,
+        navbar,
+        content,
+        index_page.layout,
+        working_time.layout,
+        app_usage.layout,
+        suggestion.layout,
+    ]
+)
+
 
 @app.callback(
     [Output("page-title", "children"), Output("page-content", "children")],
