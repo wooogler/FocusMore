@@ -1,4 +1,4 @@
-import dash
+import os
 from dash import dcc, html, Input, Output
 import dash_bootstrap_components as dbc
 
@@ -12,17 +12,17 @@ SIDEBAR_STYLE = {
     "bottom": 0,
     "width": "16rem",
     "padding": "2rem 1rem",
-    "background-color": "#f8f9fa",
+    "backgroundColor": "#f8f9fa",
 }
 
 NAVBAR_STYLE = {
-    "margin-left": "16rem",
-    "background-color": "#EBE5FC",
+    "marginLeft": "16rem",
+    "backgroundColor": "#EBE5FC",
     "display": "flex",
 }
 
 CONTENT_STYLE = {
-    "margin-left": "16rem",
+    "marginLeft": "16rem",
     "padding": "1rem 1rem",
     "height": "calc(100vh - 56px)",
 }
@@ -33,7 +33,7 @@ sidebar = html.Div(
             "FocusMore",
             href="/",
             className="h3",
-            style={"text-decoration": "none", "color": "black"},
+            style={"textDecoration": "none", "color": "black"},
         ),
         html.Hr(),
         dbc.Nav(
@@ -55,25 +55,8 @@ sidebar = html.Div(
     style=SIDEBAR_STYLE,
 )
 
-navbar2 = dbc.NavbarSimple(
-    children=[
-        html.P("Username:"),
-        dcc.Dropdown(
-            id="user-dropdown",
-            options=[{"label": "P0701", "value": "P0701"}],
-            value="P0701",
-            searchable=False,
-            clearable=False,
-            style={"width": "100px"},
-        ),
-    ],
-    id="page-title",
-    brand="",
-    color="primary",
-    dark=True,
-    style=NAVBAR_STYLE,
-)
-
+user_list = os.listdir(os.path.join(os.getcwd(), "user_data"))
+user_list.sort()
 
 navbar = html.Div(
     [
@@ -83,7 +66,7 @@ navbar = html.Div(
                 html.P("Username:", className="my-auto mx-2"),
                 dcc.Dropdown(
                     id="user-dropdown",
-                    options=[{"label": "P0701", "value": "P0701"}],
+                    options=[{"label": x, "value": x} for x in user_list],
                     value="P0701",
                     searchable=False,
                     clearable=False,
@@ -102,8 +85,27 @@ navbar = html.Div(
 content = html.Div(id="page-content", style=CONTENT_STYLE)
 
 app.layout = html.Div(
-    [dcc.Location(id="url", refresh=False), sidebar, navbar, content],
+    [
+        dcc.Store(id="places", storage_type="session"),
+        dcc.Store(id="place-areas", storage_type="session"),
+        dcc.Location(id="url", refresh=False),
+        sidebar,
+        navbar,
+        content,
+    ],
     style={"height": "100vh"},
+)
+
+app.validation_layout = html.Div(
+    [
+        sidebar,
+        navbar,
+        content,
+        index_page.layout,
+        working_time.layout,
+        app_usage.layout,
+        suggestion.layout,
+    ]
 )
 
 
