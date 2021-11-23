@@ -117,8 +117,6 @@ def on_add_place(add_btn, delete_btn, place_name, places, selected_place):
     else:
         button_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
-    print(button_id)
-
     places = places or []
 
     if button_id == "add-place-state":
@@ -243,8 +241,14 @@ def ranges_to_time(ranges):
 def update_entire_chart(selectedData, user_name, start_date, end_date):
     if selectedData is None:
         return [{}, {}]
+    # timestamp_list = list(
+    #     map(lambda point: int(point["hovertext"]), selectedData.get("points"))
+    # )
     timestamp_list = list(
-        map(lambda point: int(point["hovertext"]), selectedData.get("points"))
+        map(
+            lambda point: datetime.fromisoformat(point["hovertext"]).timestamp() * 1000,
+            selectedData.get("points"),
+        )
     )
     timestamp_ranges = list(
         map(
@@ -252,6 +256,7 @@ def update_entire_chart(selectedData, user_name, start_date, end_date):
             grouper(timestamp_list, 1000 * 60 * 60 * 4),
         )
     )
+    print([pd.to_datetime(item, unit="ms") for item in timestamp_ranges])
     act_files = glob.glob(
         os.path.join(
             os.getcwd(), "user_data", user_name, "PhysicalActivityEventEntity-*.csv"
@@ -354,11 +359,13 @@ def update_entire_chart(selectedData, user_name, start_date, end_date):
     )
 
     still_dict = divide_time_ranges_into_date(still_time_ranges)
+
     not_still_dict = divide_time_ranges_into_date(not_still_time_ranges)
     screen_on_dict = divide_time_ranges_into_date(screen_on_time_ranges)
+    print(still_dict.keys(), not_still_dict.keys(), screen_on_dict.keys())
 
     date_range = sorted(list(still_dict.keys()))
-
+    print(date_range)
     datetime_range = pd.date_range(start=date_range[0], end=date_range[-1])
     df_daily = pd.DataFrame(
         {

@@ -119,7 +119,7 @@ def update_graphs(user_name, start_date, selectedDay):
     actDf = []
     for filename in file_list:
         if filename.startswith('PhysicalActivityEventEntity'):
-            df = pd.read_csv(os.path.join(usrDir + '\\'+ filename))
+            df = pd.read_csv(os.path.join(usrDir, filename))
             df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
             actDf.append(df)
     actDf = pd.concat(actDf)
@@ -185,7 +185,7 @@ def update_graphs(user_name, start_date, selectedDay):
 
     for filename in file_list:
         if filename.startswith('DeviceEventEntity'):
-            df = pd.read_csv(os.path.join(usrDir +'\\'+ filename))
+            df = pd.read_csv(os.path.join(usrDir,filename))
             df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
             screenDf.append(df)
     screenDf = pd.concat(screenDf)
@@ -273,7 +273,7 @@ def update_graphs(user_name, start_date, selectedDay):
 
     for filename in file_list:
         if filename.startswith('AppUsageStatEntity'):
-            df = pd.read_csv(os.path.join(usrDir +'\\'+ filename))
+            df = pd.read_csv(os.path.join(usrDir, filename))
             df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
             appDf.append(df)
     appDf = pd.concat(appDf)
