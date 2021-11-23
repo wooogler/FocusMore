@@ -1,19 +1,30 @@
 from dash import dcc, html, Input, Output
 import dash_bootstrap_components as dbc
 import pandas as pd
+from datetime import timedelta, date, datetime
 import plotly.express as px
 import plotly.graph_objects as go
 from app import app
 import json
 import os
 import glob
-
+import numpy as np
 heat_df = pd.read_csv("data/heat.csv")
 app_df = pd.read_csv("data/AppUsageStatEntity-5572736000.csv")
 app_df["time"] = pd.to_datetime(app_df["timestamp"], unit="ms")
 app_df = app_df.loc[:, ["time", "name", "startTime", "endTime", "totalTimeForeground"]]
 app_df.sort_values(by="time", ascending=True)
 
+def extract_df(df, start_date, end_date):
+    if start_date is not None:
+        start_date_timestamp = datetime.fromisoformat(start_date).timestamp() * 1000
+        df = df.loc[start_date_timestamp <= df["timestamp"]]
+    if end_date is not None:
+        end_date_timestamp = (
+            datetime.fromisoformat(end_date) + timedelta(days=1)
+        ).timestamp() * 1000
+        df = df.loc[df["timestamp"] < end_date_timestamp]
+    return df
 
 def ampm(x):
     if x < 12:
@@ -33,6 +44,15 @@ def cutname(y):
         return y
     else:
         return y.split()[-1]
+
+def files_to_df(files):
+    dfs=(pd.read_csv(f) for f in files)
+    df=pd.concat(df_loc_files, ignore_index=True)
+    df=df.sort_values(["timestamp"])
+    return df
+
+def range_data(d, start_date, end_date):
+    return d.loc[(d["time"]>=start_date)&(d["time"]<end_date+timedelta(days=1))]
 
 
 fig1 = go.Figure(
@@ -100,12 +120,49 @@ layout = dbc.Container(
     class_name="h-100",
 )
 
+# @app.callback(
+#     [
+#         Output("date-picker-range", "min_date_allowed"),
+#         Output("date-picker-range", "max_date_allowed"),
+#         Output("appPie", "selectedData"),
+#         Output("heatmap", "selectedData")
+#     ],
+#     Input("user-dropdown", "value"),
+#     Input("date-picker-range", "start_date"),
+#     Input("date-picker-range", "end_date"),
+# )
+# def update_data(user_name, start_date, end_date):
+#     app_files=glob.glob(
+#         os.path.join(os.getcwd(), "user_data", user_name, "AppUsageStatEntity-*.csv")
+#     )
+#     loc_files=glob.glob(
+#         os.path.join(os.getcwd(), "user_data", user_name, "LocationEntity-*.csv")
+#     )
+#     phy_files=glob.glob(
+#         os.path.join(os.getcwd(), "user_data", user_name, "PhysicalActivityEventEntity-*.csv")
+#     )
+#     app_df=files_to_df(app_files)
+#     app_df["time"] = pd.to_datetime(app_df["timestamp"], unit="ms")
+#     app_df=range_data(app_df)
+#     loc_df=files_to_df(loc_files)
+#     loc_df["time"] = pd.to_datetime(loc_df["timestamp"], unit="ms")
+#     loc_df=range_data(loc_df)
+#     phy_df=files_to_df(app_files)
+#     phy_df["time"] = pd.to_datetime(phy_df["timestamp"], unit="ms")
+#     phy_df=range_data(phy_df)
+#     app_df=app_df.loc[:,["timestamp", "name", "startTime", "endTime","totalTimeForeground"]]
+#     min_date = date.fromtimestamp(min(df_loc["timestamp"]) / 1000).isoformat()
+#     max_date = (
+#         date.fromtimestamp(max(df_loc["timestamp"]) / 1000) + timedelta(days=1)
+#     ).isoformat()
+#     return([min_date, max_date, app_df, [loc_df, phy_df]])
+    
 
 @app.callback(
     Output("output", "children"),
-    [Input("heatmap", "hoverData"), Input("heatmap", "clickData")],
+    Input("heatmap", "clickData"),
 )
-def show_data(hoverData, clickData):
+def show_data(clickData):
     if clickData is not None:
         locationName = clickData["points"][0]["y"]
         timeMid = clickData["points"][0]["x"]
@@ -116,7 +173,8 @@ def show_data(hoverData, clickData):
         return [html.P(["Location", html.Br(), "Time"])]
 
 
-@app.callback(Output("appPie", "figure"), 
+@app.callback(
+              Output("appPie", "figure"),
               Input("heatmap", "clickData"), 
               Input("user-dropdown", "value"),
               Input("date-picker-range", "start_date"),
@@ -131,19 +189,42 @@ def update_pie(clickData, user_name,start_date, end_date):
     app_df = pd.concat(df_app_files, ignore_index=True)
     app_df = app_df.sort_values(["timestamp"], ascending=True)
     app_df["time"] = pd.to_datetime(app_df["timestamp"], unit="ms")
-    app_df = app_df.loc[:, ["time", "name", "startTime", "endTime", "totalTimeForeground"]]
+    app_df=extract_df(app_df, start_date, end_date)
+    app_df = app_df.loc[:, ["time","timestamp", "name", "totalTimeForeground"]]
     app_byname=app_df.groupby(["name"])
+    
     if clickData is not None: # in response to heatmap click
 
         locationName = clickData["points"][0]["y"]
         timeMid = clickData["points"][0]["x"]
         timeStart = timeMid - 1
         timeEnd = timeMid + 1
-        pie_df = app_df.loc[
+        app_df = app_df.loc[
             (app_df["time"].dt.hour >= timeStart) & (app_df["time"].dt.hour < timeEnd)
         ]
-        pie_df = pie_df.loc[:, ["name", "totalTimeForeground"]]
-        aggrByApp = pie_df.groupby(["name"]).max() - pie_df.groupby("name").min()
+        
+        df_start_date=min(app_df["time"]).date()
+        df_end_date=max(app_df["time"]).date()
+        day_length=(df_end_date-df_start_date).days+1
+        day_delta = pd.to_timedelta(np.arange(day_length), unit='d')
+        dates=np.repeat(np.array([df_start_date]), day_length)
+        dates += day_delta
+        dates=dates.tolist()
+        print(dates)
+        dates = list(map(lambda x: pd.to_datetime(x), dates))
+        app_time=[]
+        
+        for d in dates:
+            date_app=app_df.loc[(app_df['time']>=d) & (app_df['time']<d+timedelta(days=1))]
+            date_byApp=date_app.groupby(["name"]).max() - date_app.groupby(["name"]).min()
+            date_byApp.reset_index(level=["name"], inplace=True)
+            for index, row in date_byApp.iterrows():
+                name = row['name']
+                totalTimeForeground = row['totalTimeForeground']
+                app_time.append([name, totalTimeForeground])
+        pie_df = pd.DataFrame(app_time, columns=["name", "totalTimeForeground"])
+
+        aggrByApp = pie_df.groupby(["name"]).sum()
         aggrByApp = aggrByApp.sort_values(by=["totalTimeForeground"], ascending=False)
         aggrByApp.reset_index(level=["name"], inplace=True)
         top5app = aggrByApp.loc[:4, :]
@@ -173,6 +254,7 @@ def update_pie(clickData, user_name,start_date, end_date):
         )
         # px.pie(top5app, values='totalTimeForeground', names='name', insidetextorientation='radial')
         fig3.update_layout(legend=dict(orientation="h", xanchor="center", x=0.5))
-        return fig3
+        pieFig=fig3
     else:
-        return fig2
+        pieFig=fig2
+    return pieFig
