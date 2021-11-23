@@ -8,7 +8,7 @@ from app import app
 import json
 import os
 import glob
-
+import numpy as np
 heat_df = pd.read_csv("data/heat.csv")
 app_df = pd.read_csv("data/AppUsageStatEntity-5572736000.csv")
 app_df["time"] = pd.to_datetime(app_df["timestamp"], unit="ms")
@@ -190,7 +190,7 @@ def update_pie(clickData, user_name,start_date, end_date):
     app_df = app_df.sort_values(["timestamp"], ascending=True)
     app_df["time"] = pd.to_datetime(app_df["timestamp"], unit="ms")
     app_df=extract_df(app_df, start_date, end_date)
-    app_df = app_df.loc[:, ["time", "name", "startTime", "endTime", "totalTimeForeground"]]
+    app_df = app_df.loc[:, ["time","timestamp", "name", "totalTimeForeground"]]
     app_byname=app_df.groupby(["name"])
     
     if clickData is not None: # in response to heatmap click
@@ -199,17 +199,32 @@ def update_pie(clickData, user_name,start_date, end_date):
         timeMid = clickData["points"][0]["x"]
         timeStart = timeMid - 1
         timeEnd = timeMid + 1
-        pie_df = app_df.loc[
+        app_df = app_df.loc[
             (app_df["time"].dt.hour >= timeStart) & (app_df["time"].dt.hour < timeEnd)
         ]
         
-        # day_delta = pd.to_timedelta(np.arange(end_date-start_date), unit='d')
+        df_start_date=min(app_df["time"]).date()
+        df_end_date=max(app_df["time"]).date()
+        day_length=(df_end_date-df_start_date).days+1
+        day_delta = pd.to_timedelta(np.arange(day_length), unit='d')
+        dates=np.repeat(np.array([df_start_date]), day_length)
+        dates += day_delta
+        dates=dates.tolist()
+        print(dates)
+        dates = list(map(lambda x: pd.to_datetime(x), dates))
+        app_time=[]
         
-        
-        
-        
-        pie_df = pie_df.loc[:, ["name", "totalTimeForeground"]]
-        aggrByApp = pie_df.groupby(["name"]).max() - pie_df.groupby("name").min()
+        for d in dates:
+            date_app=app_df.loc[(app_df['time']>=d) & (app_df['time']<d+timedelta(days=1))]
+            date_byApp=date_app.groupby(["name"]).max() - date_app.groupby(["name"]).min()
+            date_byApp.reset_index(level=["name"], inplace=True)
+            for index, row in date_byApp.iterrows():
+                name = row['name']
+                totalTimeForeground = row['totalTimeForeground']
+                app_time.append([name, totalTimeForeground])
+        pie_df = pd.DataFrame(app_time, columns=["name", "totalTimeForeground"])
+
+        aggrByApp = pie_df.groupby(["name"]).sum()
         aggrByApp = aggrByApp.sort_values(by=["totalTimeForeground"], ascending=False)
         aggrByApp.reset_index(level=["name"], inplace=True)
         top5app = aggrByApp.loc[:4, :]
