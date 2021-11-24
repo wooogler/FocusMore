@@ -230,6 +230,8 @@ def update_pie(clickData, user_name, start_date, end_date, place_names, place_ar
     
     heatFig=go.Figure()
     zip_dfs=[]
+    if len(place_names)<=1:
+        heatFig.update_layout(title="Please select working places in [Working Time] page.")
     for place in [name for name in place_names if name is not None]:
         pts=place_areas[place]["points"]
         if len(pts)==0:
