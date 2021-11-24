@@ -34,7 +34,7 @@ layout = dbc.Container(
                                         ),
                                     ]
                                 ),
-                            ]
+                            ], style={"marginTop": "10%"}
                         )
                     ],
                     width=8,
