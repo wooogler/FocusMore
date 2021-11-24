@@ -76,18 +76,7 @@ def get_hour(ts):
     return (pd.to_datetime(ts, unit="ms").hour) // 2 * 2 + 1
 
 
-fig1 = go.Figure(
-    data=go.Heatmap(
-        x=heat_df.hour + 1,
-        y=heat_df.location,
-        z=heat_df.rate,
-        hovertemplate="%{y}<br>" + "%{z:d}%<extra></extra>",
-        colorscale="Purp",
-    )
-)
-fig1.update_layout(title="Focus time rate = Focus time/Total time spent", title_x=0.5)
-fig1.update_xaxes(dtick=2, title_text="time(h)")
-fig1.update_yaxes(title_text="place")
+fig1 = go.Figure()
 
 fig2 = go.Figure(
     data=go.Pie(labels=["AppName"], values=[100], marker=dict(colors=["lightgray"]))
@@ -236,40 +225,28 @@ def update_pie(clickData, user_name, start_date, end_date, place_names, place_ar
     phy_df = phy_df.sort_values(["timestamp"]).reset_index(drop=True)
     dev_df = files_to_df(dev_files)
     dev_df["time"] = pd.to_datetime(phy_df["timestamp"], unit="ms")
-    dev_df = extract_df(phy_df, start_date, end_date)
-    dev_df = dev_df.drop_duplicates(["timestamp", "type"], keep="first")
-    dev_df = dev_df.loc[dev_df["type"].isin(["SCREEN_ON", "SCREEN_OFF"])]
-    dev_df = dev_df.sort_values(["timestamp"]).reset_index(drop=True)
-
-    hours = list(range(1, 24, 2))
-    zeros = [0] * 12
-    place_still = []
-    place_on = []
-    phy_df["isStill"] = phy_df["type"].apply(lambda t: t == "STILL")
-    dev_df["isOn"] = dev_df["type"].apply(lambda t: t == "SCREEN_ON")
-
-    heatFig = go.Figure()
-    zip_dfs = []
-    print(place_names)
-    for place in [name for name in place_names if name is not None]:
-        print(place)
-        pts = place_areas[place]["points"]
-        print(len(pts))
-        if len(pts) == 0:
+    dev_df=extract_df(phy_df, start_date, end_date)
+    dev_df=dev_df.drop_duplicates(["timestamp","type"], keep="first")
+    dev_df=dev_df.loc[dev_df["type"].isin(["SCREEN_ON", "SCREEN_OFF"])]
+    dev_df=dev_df.sort_values(["timestamp"]).reset_index(drop=True)
+    
+    hours=list(range(1,24,2))
+    zeros=[0]*12
+    place_on=[]
+    phy_df["isStill"]=phy_df["type"].apply(lambda t: t=="STILL")
+    dev_df["isOn"]=dev_df["type"].apply(lambda t: t=="SCREEN_ON")
+    
+    heatFig=go.Figure()
+    zip_dfs=[]
+    for place in place_names:
+        # print(place)
+        pts=place_areas[place]["points"]
+        # print(len(pts))
+        if len(pts)==0:
             continue
-        print(pts[0]["hovertext"])
-        timestamp_list = list(
-            map(
-                lambda pt: int(
-                    time.mktime(
-                        datetime.strptime(
-                            pt["hovertext"][:19], "%Y-%m-%dT%H:%M:%S"
-                        ).timetuple()
-                    )
-                    * 1000
-                ),
-                pts,
-            )
+        # print(pts[0]["hovertext"])
+        timestamp_list=list(
+            map(lambda pt: int(time.mktime(datetime.strptime(pt["hovertext"][:19], '%Y-%m-%dT%H:%M:%S').timetuple())*1000), pts)
         )
         timestamp_ranges = list(
             map(
@@ -278,14 +255,39 @@ def update_pie(clickData, user_name, start_date, end_date, place_names, place_ar
             )
         )
         # print(1)
-        still_time_ranges = []
-        hour_stillTime = dict(zip(hours, zeros))
+        still_time_ranges=[]
+        hour_placeTime=dict(zip(hours, zeros))
+        hour_stillTime=dict(zip(hours, zeros))
         for r in timestamp_ranges:
             phy_df_place = phy_df.loc[phy_df["timestamp"].between(r[0], r[1])]
 
             # print(1.5)
-
-            still_start = -1
+            r_start_h=get_hour(r[0])
+            r_end_h=get_hour(r[1])
+            if (r_start_h==r_end_h):
+                hour_placeTime[r_start_h] += r[1] - r[0]
+            else:
+                hdelta=r_end_h-r_start_h
+                st=pd.to_datetime(r[0], unit='ms')
+                et=pd.to_datetime(r[1], unit='ms')
+                sh=st.hour
+                sm=st.minute
+                eh=et.hour
+                em=et.minute
+                m1=((r_start_h+2-sh)*60-sm)*1000*60
+                m2=((r_end_h-eh)*60-em)*1000*60
+                hour_placeTime[r_start_h]+=m1
+                hour_placeTime[r_end_h]+=m2
+                if hdelta>2:
+                    for i in range(2,hdelta+2,2):
+                        hour_placeTime[r_start_h+i]+=1000*60*2
+                elif hdelta<0:
+                    hdelta=r_end_h+24-r_start_h
+                    if hdelta>2:
+                        for i in range(2,hdelta+2,2):
+                            hour_placeTime[(r_start_h+i)%24]+=1000*60*2
+                    
+            still_start=-1
             for index, row in phy_df_place.iterrows():
                 # print(index)
                 # print(phy_df.loc[12])
@@ -299,30 +301,39 @@ def update_pie(clickData, user_name, start_date, end_date, place_names, place_ar
                     still_end = row["timestamp"]
                     if still_start != -1:
                         still_time_ranges.append([still_start, still_end])
-                        still_start_hour = get_hour(still_start)
-                        still_end_hour = get_hour(still_end)
-                        if still_start_hour == still_end_hour:
-                            hour_stillTime[still_start_hour] += still_end - still_start
+                        still_start_hour=get_hour(still_start)
+                        still_end_hour=get_hour(still_end)
+                        
+                        if still_start_hour==still_end_hour:
+                            hour_stillTime[still_start_hour] += still_end-still_start
+                            # if still_end-still_start<0:
+                            #     print("timetamp")
+                            #     print(still_end, still_start)
                         else:
-                            hdelta = still_end_hour - still_start_hour
-                            st = pd.to_datetime(still_start, unit="ms")
-                            et = pd.to_datetime(still_end, unit="ms")
-                            sh = st.hour
-                            sm = st.minute
-                            eh = et.hour
-                            em = et.minute
-                            m1 = ((still_start_hour + 2 - sh) * 60 - sm) * 1000 * 60
-                            m2 = ((eh - still_end_hour) * 60 + em) * 1000 * 60
-                            hour_stillTime[still_start_hour] += m1
-                            hour_stillTime[still_end_hour] += m2
-                            if hdelta > 2:
-                                for i in range(2, hdelta + 2, 2):
-                                    hour_stillTime[still_start_hour + i] += (
-                                        1000 * 60 * 2
-                                    )
+                            hdelta=still_end_hour-still_start_hour
+                            st=pd.to_datetime(still_start,unit='ms')
+                            et=pd.to_datetime(still_end, unit='ms')
+                            sh=st.hour
+                            sm=st.minute
+                            eh=et.hour
+                            em=et.minute
+                            m1=((still_start_hour+2-sh)*60-sm)*1000*60
+                            m2=((still_end_hour-eh)*60+em)*1000*60
+                            hour_stillTime[still_start_hour]+=m1
+                            hour_stillTime[still_end_hour]+=m2
+                            # if m1<0 or m2<0:
+                            #     print("m")
+                            #     print(still_start_hour, still_end_hour)
+                            #     print(m1, m2)
+                            #     print(eh, still_end_hour)
+                            if hdelta>2:
+                                for i in range(2,hdelta+2,2):
+                                    hour_stillTime[still_start_hour+i]+=1000*60*2
                             # elif hdelta<0:
-                        still_start = -1
-        place_still.append(hour_stillTime)
+                            #     print("implement")
+                            # elif hdelta<0:
+                        still_start=-1
+        
         # print(2)
         hour_onTime = dict(zip(hours, zeros))
         for r in still_time_ranges:
@@ -341,38 +352,38 @@ def update_pie(clickData, user_name, start_date, end_date, place_names, place_ar
                     if on_start_hour == on_end_hour:
                         hour_onTime[on_start_hour] += on_end - on_start
                     else:
-                        hdelta = on_end_hour - on_start_hour
-                        st = pd.to_datetime(on_start, unit="ms")
-                        et = pd.to_datetime(on_end, unit="ms")
-                        sh = st.hour
-                        sm = st.minute
-                        eh = et.hour
-                        em = et.minute
-                        m1 = ((on_start_hour + 2 - sh) * 60 - sm) * 1000 * 60
-                        m2 = ((eh - on_end_hour) * 60 + em) * 1000 * 60
-                        hour_onTime[on_start_hour] += m1
-                        hour_onTime[on_end_hour] += m2
-                        if hdelta > 2:
-                            for i in range(2, hdelta + 2, 2):
-                                hour_onTime[on_start_hour + i] += 1000 * 60 * 2
-                        # elif hdelta<0:
-                    on_start = -1
+                        hdelta=on_end_hour-on_start_hour
+                        st=pd.to_datetime(on_start,unit='ms')
+                        et=pd.to_datetime(on_end, unit='ms')
+                        sh=st.hour
+                        sm=st.minute
+                        eh=et.hour
+                        em=et.minute
+                        m1=((on_start_hour+2-sh)*60-sm)*1000*60
+                        m2=((eh-on_end_hour)*60+em)*1000*60
+                        hour_onTime[on_start_hour]+=m1
+                        hour_onTime[on_end_hour]+=m2
+                        
+                        if hdelta>2:
+                            for i in range(2,hdelta+2,2):
+                                hour_onTime[on_start_hour+i]+=1000*60*2
+                        #elif hdelta<0:
+                    on_start=-1
         place_on.append(hour_onTime)
-        place_rate = []
-        print(hour_stillTime)
-        print(hour_onTime)
-        for k in list(hour_stillTime.keys()):
-            if hour_stillTime[k] != 0:
-                place_rate.append(100 - hour_onTime[k] / hour_stillTime[k] * 100)
+        place_rate=[]
+        # print(hour_placeTime)
+        # print(hour_onTime)
+        for k in list(hour_placeTime.keys()):
+            if hour_placeTime[k]!=0:
+                rate=(hour_stillTime[k]-hour_onTime[k])/hour_placeTime[k]*100
+                place_rate.append(rate%100)
             else:
                 place_rate.append(None)
         # print(max(place_rate))
-        place12 = [place] * 12
-        print(place12)
-        zip_df = pd.DataFrame(
-            list(zip(hours, place12, place_rate)), columns=["time", "place", "rate"]
-        )
-        print(zip_df)
+        place12=[place]*12
+        # print(place12)
+        zip_df=pd.DataFrame(list(zip(hours, place12, place_rate)), columns=['time','place','rate'])
+        # print(zip_df)
         zip_dfs.append(zip_df)
         # heatFig.add_trace(go.Heatmap(
         #     x=zip_df.time,
@@ -418,8 +429,8 @@ def update_pie(clickData, user_name, start_date, end_date, place_names, place_ar
         day_delta = pd.to_timedelta(np.arange(day_length), unit="d")
         dates = np.repeat(np.array([df_start_date]), day_length)
         dates += day_delta
-        dates = dates.tolist()
-        print(dates)
+        dates=dates.tolist()
+        # print(dates)
         dates = list(map(lambda x: pd.to_datetime(x), dates))
         app_time = []
 
