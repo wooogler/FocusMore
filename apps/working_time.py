@@ -12,8 +12,8 @@ import os
 import glob
 
 
-def generate_item(title, children="children"):
-    return html.Div([html.H4(title), children], style={"height": "100%"})
+def generate_item(title, children="children", id="title"):
+    return html.Div([html.H4(title, id=id), children], style={"height": "100%"})
 
 
 df_act = pd.read_csv("data/PhysicalActivityTransitionEntity-5572736000.csv")
@@ -39,7 +39,7 @@ layout = dbc.Container(
             [
                 dbc.Col(
                     generate_item(
-                        title="Working places on a map",
+                        title="",
                         children=dcc.Graph(
                             id="location-map",
                             style={"height": "calc(100% - 44px)"},
@@ -79,15 +79,17 @@ layout = dbc.Container(
             [
                 dbc.Col(
                     generate_item(
-                        title="Entire time spent at Our Lab",
+                        title="Please select your working places above",
                         children=dcc.Graph(id="entire-chart"),
+                        id="entire-title",
                     ),
                     width=6,
                 ),
                 dbc.Col(
                     generate_item(
-                        title="Daily time spent at Our Lab",
+                        title="Please select your working places above",
                         children=dcc.Graph(id="daily-chart"),
+                        id="daily-title",
                     ),
                     width=6,
                 ),
@@ -162,8 +164,6 @@ def extract_df(df, start_date, end_date):
 @app.callback(
     [
         Output("location-map", "figure"),
-        Output("date-picker-range", "min_date_allowed"),
-        Output("date-picker-range", "max_date_allowed"),
         Output("location-map", "selectedData"),
     ],
     Input("user-dropdown", "value"),
@@ -200,7 +200,7 @@ def update_map(user_name, start_date, end_date, selected_place, place_areas):
         selectedpoints = [x["pointIndex"] for x in selectedData["points"]]
         fig_loc.update_traces(selectedpoints=selectedpoints)
 
-    return [fig_loc, min_date, max_date, selectedData]
+    return [fig_loc, selectedData]
 
 
 def grouper(list_, threshold):
@@ -235,15 +235,39 @@ def ranges_to_time(ranges):
 
 
 @app.callback(
-    [Output("entire-chart", "figure"), Output("daily-chart", "figure")],
+    [Output("entire-title", "children"), Output("daily-title", "children")],
+    Input("place-select", "value"),
+)
+def update_chart_title(place):
+    if place is None:
+        return ["", "Please select your woking places above"]
+
+    return [
+        "Total time spent at {}".format(place),
+        "Daily time spent at {}".format(place),
+    ]
+
+
+@app.callback(
+    [
+        Output("entire-chart", "figure"),
+        Output("daily-chart", "figure"),
+        Output("entire-chart", "style"),
+        Output("daily-chart", "style"),
+    ],
     Input("location-map", "selectedData"),
     Input("user-dropdown", "value"),
     Input("date-picker-range", "start_date"),
     Input("date-picker-range", "end_date"),
 )
-def update_entire_chart(selectedData, user_name, start_date, end_date):
+def update_chart(selectedData, user_name, start_date, end_date):
     if selectedData is None:
-        return [{}, {}]
+        return [
+            {},
+            {},
+            {"display": "none"},
+            {"display": "none"},
+        ]
     # timestamp_list = list(
     #     map(lambda point: int(point["hovertext"]), selectedData.get("points"))
     # )
@@ -422,4 +446,4 @@ def update_entire_chart(selectedData, user_name, start_date, end_date):
     )
     fig_daily.update_layout(barmode="stack", margin={"r": 0, "t": 0, "l": 0, "b": 100})
 
-    return [fig_entire, fig_daily]
+    return [fig_entire, fig_daily, {"display": "block"}, {"display": "block"}]

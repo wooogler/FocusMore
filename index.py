@@ -2,6 +2,8 @@ import os
 from dash import dcc, html, Input, Output
 import dash_bootstrap_components as dbc
 
+import pandas as pd
+
 from app import app
 from apps import app_usage, working_time, suggestion, index_page
 
@@ -81,7 +83,6 @@ navbar = html.Div(
     style=NAVBAR_STYLE,
 )
 
-
 content = html.Div(id="page-content", style=CONTENT_STYLE)
 
 app.layout = html.Div(
@@ -96,17 +97,33 @@ app.layout = html.Div(
     style={"height": "100vh"},
 )
 
-app.validation_layout = html.Div(
+# app.validation_layout = html.Div(
+#     [
+#         sidebar,
+#         navbar,
+#         content,
+#         index_page.layout,
+#         working_time.layout,
+#         app_usage.layout,
+#         suggestion.layout,
+#     ]
+# )
+
+
+@app.callback(
     [
-        sidebar,
-        navbar,
-        content,
-        index_page.layout,
-        working_time.layout,
-        app_usage.layout,
-        suggestion.layout,
-    ]
+        Output("user-dropdown", "disabled"),
+        Output("date-picker-range", "disabled"),
+        Output("places", "clear_data"),
+        Output("place-areas", "clear_data"),
+    ],
+    [Input("url", "pathname")],
 )
+def disable_select(pathname):
+    if pathname == "/":
+        return [False, False, True, True]
+    else:
+        return [True, True, False, False]
 
 
 @app.callback(
@@ -115,22 +132,25 @@ app.validation_layout = html.Div(
 )
 def render_page_content(pathname):
     if pathname == "/":
-        return ["Index", index_page.layout]
+        return ["Select Username and Date Range", index_page.layout]
     elif pathname == "/working_time":
         return ["Working time", working_time.layout]
     elif pathname == "/app_usage":
         return ["App Usage", app_usage.layout]
     elif pathname == "/suggestion":
         return ["Suggestion", suggestion.layout]
-    return dbc.Container(
-        [
-            html.H1("404: Not found", className="display-3"),
-            html.Hr(className="my-2"),
-            html.P(f"There is no page for pathname {pathname}"),
-        ],
-        fluid=True,
-        className="py-3",
-    )
+    return [
+        "404 page",
+        dbc.Container(
+            [
+                html.H1("404: Not found", className="display-3"),
+                html.Hr(className="my-2"),
+                html.P(f"There is no page for pathname {pathname}"),
+            ],
+            fluid=True,
+            className="py-3",
+        ),
+    ]
 
 
 if __name__ == "__main__":
