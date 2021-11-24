@@ -386,8 +386,6 @@ def update_pie(clickData, user_name, start_date, end_date, place_names, place_ar
         app_df = app_df.loc[
             (app_df["time"].dt.hour >= timeStart) & (app_df["time"].dt.hour < timeEnd)
         ]
-        print(app_df.size)
-        print(clickData)
         if app_df.size==0 or clickData["points"][0]["z"] is None:
             pieFig=fig2
         else:
