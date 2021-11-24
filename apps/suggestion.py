@@ -79,7 +79,7 @@ def get_hour(ts):
 fig1 = go.Figure()
 
 fig2 = go.Figure(
-    data=go.Pie(labels=["AppName"], values=[100], marker=dict(colors=["lightgray"]))
+    data=go.Pie(labels=["No Data"], values=[100], marker=dict(colors=["lightgray"]))
 )
 fig2.update_layout(legend=dict(orientation="h", xanchor="center", x=0.5))
 layout = dbc.Container(
@@ -96,7 +96,7 @@ layout = dbc.Container(
                                         [
                                             "Summary of Focus Time Rate for selected date range.",
                                             html.Br(),
-                                            "Put the cursor on each slot to check app usage percentage.",
+                                            "Click each colored slot to check app usage percentage.",
                                         ]
                                     ),
                                 ],
@@ -255,8 +255,6 @@ def update_pie(clickData, user_name, start_date, end_date, place_names, place_ar
         hour_stillTime=dict(zip(hours, zeros))
         for r in timestamp_ranges:
             phy_df_place = phy_df.loc[phy_df["timestamp"].between(r[0], r[1])]
-
-            # print(1.5)
             r_start_h=get_hour(r[0])
             r_end_h=get_hour(r[1])
             if (r_start_h==r_end_h):
@@ -380,7 +378,7 @@ def update_pie(clickData, user_name, start_date, end_date, place_names, place_ar
     app_byname = app_df.groupby(["name"])
 
     if clickData is not None:  # in response to heatmap click
-
+        
         locationName = clickData["points"][0]["y"]
         timeMid = clickData["points"][0]["x"]
         timeStart = timeMid - 1
@@ -388,62 +386,66 @@ def update_pie(clickData, user_name, start_date, end_date, place_names, place_ar
         app_df = app_df.loc[
             (app_df["time"].dt.hour >= timeStart) & (app_df["time"].dt.hour < timeEnd)
         ]
+        print(app_df.size)
+        print(clickData)
+        if app_df.size==0 or clickData["points"][0]["z"] is None:
+            pieFig=fig2
+        else:
+            df_start_date = min(app_df["time"]).date()
+            df_end_date = max(app_df["time"]).date()
+            day_length = (df_end_date - df_start_date).days + 1
+            day_delta = pd.to_timedelta(np.arange(day_length), unit="d")
+            dates = np.repeat(np.array([df_start_date]), day_length)
+            dates += day_delta
+            dates=dates.tolist()
+            dates = list(map(lambda x: pd.to_datetime(x), dates))
+            app_time = []
 
-        df_start_date = min(app_df["time"]).date()
-        df_end_date = max(app_df["time"]).date()
-        day_length = (df_end_date - df_start_date).days + 1
-        day_delta = pd.to_timedelta(np.arange(day_length), unit="d")
-        dates = np.repeat(np.array([df_start_date]), day_length)
-        dates += day_delta
-        dates=dates.tolist()
-        dates = list(map(lambda x: pd.to_datetime(x), dates))
-        app_time = []
-
-        for d in dates:
-            date_app = app_df.loc[
-                (app_df["time"] >= d) & (app_df["time"] < d + timedelta(days=1))
-            ]
-            date_byApp = (
-                date_app.groupby(["name"]).max() - date_app.groupby(["name"]).min()
-            )
-            date_byApp.reset_index(level=["name"], inplace=True)
-            for index, row in date_byApp.iterrows():
-                name = row["name"]
-                totalTimeForeground = row["totalTimeForeground"]
-                app_time.append([name, totalTimeForeground])
-        pie_df = pd.DataFrame(app_time, columns=["name", "totalTimeForeground"])
-
-        aggrByApp = pie_df.groupby(["name"]).sum()
-        aggrByApp = aggrByApp.sort_values(by=["totalTimeForeground"], ascending=False)
-        aggrByApp.reset_index(level=["name"], inplace=True)
-        top5app = aggrByApp.loc[:4, :]
-        top5app.loc["name"] = top5app["name"].apply(lambda x: cutname(x))
-        etc = aggrByApp.loc[5:, :]
-        top5app = top5app.append(
-            pd.DataFrame(
-                [["etc", sum(etc.totalTimeForeground)]],
-                columns=["name", "totalTimeForeground"],
-                index=[5],
-            )
-        )
-        top5app["totalMin"] = top5app["totalTimeForeground"] / 60000
-        top5app = top5app.loc[top5app["totalTimeForeground"] != 0]
-        fig3 = go.Figure(
-            data=[
-                go.Pie(
-                    labels=top5app.name,
-                    values=top5app.totalMin,
-                    textinfo="percent",
-                    hoverinfo="label+value",
-                    insidetextorientation="radial",
-                    direction="clockwise",
-                    sort=False,
+            for d in dates:
+                date_app = app_df.loc[
+                    (app_df["time"] >= d) & (app_df["time"] < d + timedelta(days=1))
+                ]
+                date_byApp = (
+                    date_app.groupby(["name"]).max() - date_app.groupby(["name"]).min()
                 )
-            ]
-        )
-        
-        fig3.update_layout(legend=dict(orientation="h", xanchor="center", x=0.5))
-        pieFig = fig3
+                date_byApp.reset_index(level=["name"], inplace=True)
+                for index, row in date_byApp.iterrows():
+                    name = row["name"]
+                    totalTimeForeground = row["totalTimeForeground"]
+                    app_time.append([name, totalTimeForeground])
+            pie_df = pd.DataFrame(app_time, columns=["name", "totalTimeForeground"])
+
+            aggrByApp = pie_df.groupby(["name"]).sum()
+            aggrByApp = aggrByApp.sort_values(by=["totalTimeForeground"], ascending=False)
+            aggrByApp.reset_index(level=["name"], inplace=True)
+            top5app = aggrByApp.loc[:4, :]
+            top5app["name"] = top5app["name"].apply(lambda x: cutname(x))
+            etc = aggrByApp.loc[5:, :]
+            top5app = top5app.append(
+                pd.DataFrame(
+                    [["etc", sum(etc.totalTimeForeground)]],
+                    columns=["name", "totalTimeForeground"],
+                    index=[5],
+                )
+            )
+            top5app["totalMin"] = top5app["totalTimeForeground"] / 60000
+            top5app = top5app.loc[top5app["totalTimeForeground"] != 0]
+            fig3 = go.Figure(
+                data=[
+                    go.Pie(
+                        labels=top5app.name,
+                        values=top5app.totalMin,
+                        textinfo="percent",
+                        hoverinfo="label+value",
+                        insidetextorientation="radial",
+                        direction="clockwise",
+                        sort=False,
+                    )
+                ]
+            )
+            
+            fig3.update_layout(legend=dict(orientation="h", xanchor="center", x=0.5))
+            pieFig = fig3
     else:
         pieFig = fig2
 
