@@ -193,7 +193,6 @@ def show_data(clickData):
     Input("place-areas", "data"),
 )
 def update_pie(clickData, user_name, start_date, end_date, place_names, place_areas):
-    # if place_names is None:
     ##overall data##
     # in response to username change
     app_files = glob.glob(
@@ -239,12 +238,9 @@ def update_pie(clickData, user_name, start_date, end_date, place_names, place_ar
     heatFig=go.Figure()
     zip_dfs=[]
     for place in [name for name in place_names if name is not None]:
-        # print(place)
         pts=place_areas[place]["points"]
-        # print(len(pts))
         if len(pts)==0:
             continue
-        # print(pts[0]["hovertext"])
         timestamp_list=list(
             map(lambda pt: int(time.mktime(datetime.strptime(pt["hovertext"][:19], '%Y-%m-%dT%H:%M:%S').timetuple())*1000), pts)
         )
@@ -254,7 +250,6 @@ def update_pie(clickData, user_name, start_date, end_date, place_names, place_ar
                 grouper(timestamp_list, 1000 * 60 * 60 * 4),
             )
         )
-        # print(1)
         still_time_ranges=[]
         hour_placeTime=dict(zip(hours, zeros))
         hour_stillTime=dict(zip(hours, zeros))
@@ -279,21 +274,17 @@ def update_pie(clickData, user_name, start_date, end_date, place_names, place_ar
                 hour_placeTime[r_start_h]+=m1
                 hour_placeTime[r_end_h]+=m2
                 if hdelta>2:
-                    for i in range(2,hdelta+2,2):
+                    for i in range(2,hdelta,2):
                         hour_placeTime[r_start_h+i]+=1000*60*2
                 elif hdelta<0:
                     hdelta=r_end_h+24-r_start_h
                     if hdelta>2:
-                        for i in range(2,hdelta+2,2):
+                        for i in range(2,hdelta,2):
                             hour_placeTime[(r_start_h+i)%24]+=1000*60*2
                     
             still_start=-1
             for index, row in phy_df_place.iterrows():
-                # print(index)
-                # print(phy_df.loc[12])
-                # print(2)
                 prev = phy_df.loc[index - 1].isStill
-                # print(1.6)
                 curr = row["isStill"]
                 if (not prev) and curr:
                     still_start = row["timestamp"]
@@ -306,9 +297,6 @@ def update_pie(clickData, user_name, start_date, end_date, place_names, place_ar
                         
                         if still_start_hour==still_end_hour:
                             hour_stillTime[still_start_hour] += still_end-still_start
-                            # if still_end-still_start<0:
-                            #     print("timetamp")
-                            #     print(still_end, still_start)
                         else:
                             hdelta=still_end_hour-still_start_hour
                             st=pd.to_datetime(still_start,unit='ms')
@@ -321,20 +309,11 @@ def update_pie(clickData, user_name, start_date, end_date, place_names, place_ar
                             m2=((still_end_hour-eh)*60+em)*1000*60
                             hour_stillTime[still_start_hour]+=m1
                             hour_stillTime[still_end_hour]+=m2
-                            # if m1<0 or m2<0:
-                            #     print("m")
-                            #     print(still_start_hour, still_end_hour)
-                            #     print(m1, m2)
-                            #     print(eh, still_end_hour)
                             if hdelta>2:
                                 for i in range(2,hdelta+2,2):
                                     hour_stillTime[still_start_hour+i]+=1000*60*2
                             # elif hdelta<0:
-                            #     print("implement")
-                            # elif hdelta<0:
                         still_start=-1
-        
-        # print(2)
         hour_onTime = dict(zip(hours, zeros))
         for r in still_time_ranges:
             dev_df_still = dev_df.loc[dev_df["timestamp"].between(r[0], r[1])]
@@ -365,34 +344,21 @@ def update_pie(clickData, user_name, start_date, end_date, place_names, place_ar
                         hour_onTime[on_end_hour]+=m2
                         
                         if hdelta>2:
-                            for i in range(2,hdelta+2,2):
+                            for i in range(2,hdelta,2):
                                 hour_onTime[on_start_hour+i]+=1000*60*2
                         #elif hdelta<0:
                     on_start=-1
         place_on.append(hour_onTime)
         place_rate=[]
-        # print(hour_placeTime)
-        # print(hour_onTime)
         for k in list(hour_placeTime.keys()):
             if hour_placeTime[k]!=0:
                 rate=(hour_stillTime[k]-hour_onTime[k])/hour_placeTime[k]*100
                 place_rate.append(rate%100)
             else:
                 place_rate.append(None)
-        # print(max(place_rate))
         place12=[place]*12
-        # print(place12)
         zip_df=pd.DataFrame(list(zip(hours, place12, place_rate)), columns=['time','place','rate'])
-        # print(zip_df)
         zip_dfs.append(zip_df)
-        # heatFig.add_trace(go.Heatmap(
-        #     x=zip_df.time,
-        #     y=zip_df.place,
-        #     z=zip_df.rate,
-        #     hovertemplate="%{y}<br>" + "%{z:d}%<extra></extra>",
-        #     colorscale="Purp",
-        #     )
-        # )
     heat_df = pd.concat(zip_dfs, ignore_index=True)
     heatFig = go.Figure(
         data=go.Heatmap(
@@ -430,7 +396,6 @@ def update_pie(clickData, user_name, start_date, end_date, place_names, place_ar
         dates = np.repeat(np.array([df_start_date]), day_length)
         dates += day_delta
         dates=dates.tolist()
-        # print(dates)
         dates = list(map(lambda x: pd.to_datetime(x), dates))
         app_time = []
 
@@ -476,7 +441,7 @@ def update_pie(clickData, user_name, start_date, end_date, place_names, place_ar
                 )
             ]
         )
-        # px.pie(top5app, values='totalTimeForeground', names='name', insidetextorientation='radial')
+        
         fig3.update_layout(legend=dict(orientation="h", xanchor="center", x=0.5))
         pieFig = fig3
     else:
