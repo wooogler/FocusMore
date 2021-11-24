@@ -238,7 +238,7 @@ def update_pie(clickData, user_name, start_date, end_date, place_names, place_ar
     
     heatFig=go.Figure()
     zip_dfs=[]
-    for place in place_names:
+    for place in [name for name in place_names if name is not None]:
         # print(place)
         pts=place_areas[place]["points"]
         # print(len(pts))
