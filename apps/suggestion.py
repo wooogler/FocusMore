@@ -11,13 +11,6 @@ import glob
 import numpy as np
 import time
 
-heat_df = pd.read_csv("data/heat.csv")
-app_df = pd.read_csv("data/AppUsageStatEntity-5572736000.csv")
-app_df["time"] = pd.to_datetime(app_df["timestamp"], unit="ms")
-app_df = app_df.loc[:, ["time", "name", "startTime", "endTime", "totalTimeForeground"]]
-app_df.sort_values(by="time", ascending=True)
-
-
 def extract_df(df, start_date, end_date):
     if start_date is not None:
         start_date_timestamp = datetime.fromisoformat(start_date).timestamp() * 1000
