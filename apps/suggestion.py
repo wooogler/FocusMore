@@ -92,6 +92,9 @@ layout = dbc.Container(
                                             "Click each colored slot to check app usage percentage.",
                                         ]
                                     ),
+                                    html.P(
+                                        [], id='direction'
+                                    )
                                 ],
                                 style={"marginTop": "10%"},
                             ),
@@ -175,7 +178,16 @@ def show_data(clickData):
     else:
         return [html.P(["Location", html.Br(), "Time"])]
 
-
+@app.callback(
+    Output("direction", "children"),
+    Input("places","data")
+)
+def give_direction(places):
+    chd=[html.B(["Please select your working spaces ", html.A(["here"], href="/working_time")])]
+    if places is None:
+        return chd
+    if len(places)<=1:
+        return chd
 @app.callback(
     [Output("appPie", "figure"), Output("heatmap", "figure")],
     Input("heatmap", "clickData"),
