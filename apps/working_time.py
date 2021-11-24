@@ -104,12 +104,12 @@ layout = dbc.Container(
     Input("add-place-state", "n_clicks"),
     Input("delete-place", "n_clicks"),
     State("place-name-state", "value"),
-    State("places", "data"),
+    Input("places", "data"),
     State("place-select", "value"),
 )
 def on_add_place(add_btn, delete_btn, place_name, places, selected_place):
-    if place_name == "" or place_name is None:
-        raise PreventUpdate
+    # if place_name == "" or place_name is None:
+    #     raise PreventUpdate
 
     ctx = callback_context
     if not ctx.triggered:
@@ -127,21 +127,24 @@ def on_add_place(add_btn, delete_btn, place_name, places, selected_place):
         if selected_place in places:
             places.remove(selected_place)
 
-    options = [{"label": place, "value": place} for place in places]
+    options = [
+        {"label": place, "value": place} for place in places if place is not None
+    ]
 
     return [places, options]
 
 
 @app.callback(
-    [Output("place-areas", "data")],
+    Output("place-areas", "data"),
     Input("location-map", "selectedData"),
     State("place-select", "value"),
-    State("place-areas", "data"),
+    Input("place-areas", "data"),
 )
 def update_place_areas(selectedData, selected_place, place_areas):
     place_areas = place_areas or {}
-    place_areas[selected_place] = selectedData
-    return [place_areas]
+    if selected_place is not None and selected_place in place_areas:
+        place_areas[selected_place] = selectedData
+    return place_areas
 
 
 def extract_df(df, start_date, end_date):
@@ -256,7 +259,6 @@ def update_entire_chart(selectedData, user_name, start_date, end_date):
             grouper(timestamp_list, 1000 * 60 * 60 * 4),
         )
     )
-    print([pd.to_datetime(item, unit="ms") for item in timestamp_ranges])
     act_files = glob.glob(
         os.path.join(
             os.getcwd(), "user_data", user_name, "PhysicalActivityEventEntity-*.csv"
@@ -278,7 +280,7 @@ def update_entire_chart(selectedData, user_name, start_date, end_date):
     df_dev = df_dev.drop_duplicates(["timestamp", "type"], keep="first")
     df_dev = df_dev.loc[df_dev["type"].isin(["SCREEN_ON", "SCREEN_OFF"])]
     df_dev = df_dev.sort_values(["timestamp"]).reset_index(drop=True)
-    df_dev = extract_df(df_act, start_date, end_date)
+    df_dev = extract_df(df_dev, start_date, end_date)
 
     total_still_time = 0
     total_not_still_time = 0
@@ -362,10 +364,8 @@ def update_entire_chart(selectedData, user_name, start_date, end_date):
 
     not_still_dict = divide_time_ranges_into_date(not_still_time_ranges)
     screen_on_dict = divide_time_ranges_into_date(screen_on_time_ranges)
-    print(still_dict.keys(), not_still_dict.keys(), screen_on_dict.keys())
 
     date_range = sorted(list(still_dict.keys()))
-    print(date_range)
     datetime_range = pd.date_range(start=date_range[0], end=date_range[-1])
     df_daily = pd.DataFrame(
         {
