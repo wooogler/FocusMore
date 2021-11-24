@@ -7,9 +7,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 import os
 
-focus_df = pd.read_csv("data/FocusRate.csv")
-app_df = pd.read_csv("data/AppPie.csv")
-
 layout = dbc.Container(
     [
         dbc.Row(
@@ -56,8 +53,8 @@ layout = dbc.Container(
                                     ),
                                 ],
                                 style={
-                                    "borderColor": "mediumpurple",
-                                    "border": " solid 0.1em",
+                                    "borderColor": "#d62728",
+                                    "border": " solid 0.2em",
                                     "borderRadius": "10px",
                                 },
                             ),
@@ -81,8 +78,8 @@ layout = dbc.Container(
                                     ),
                                 ],
                                 style={
-                                    "borderColor": "lightgray",
-                                    "border": " solid 0.1em",
+                                    "borderColor": "#2ca02c",
+                                    "border": " solid 0.2em",
                                     "borderRadius": "10px",
                                 },
                             ),
@@ -313,7 +310,7 @@ def update_graphs(user_name, start_date, selectedDay):
     lowTop5['totalTime(m)'] = lowTop5['totalTimeForeground']/ (1000*60)
     ## ---- VISUALIZATION ---- ##
 
-    colors = {"High": "lightgray", "Low": "mediumpurple"}
+    colors = {"High": "#2ca02c", "Low": "#d62728"}
     labels = {"High": "High Focus Rate", "Low": "Low Focus Rate"}
     
     fig = go.Figure()
@@ -334,13 +331,20 @@ def update_graphs(user_name, start_date, selectedDay):
             x=[ratio_df.timeslot.min() - 1, ratio_df.timeslot.max() + 1],
             y=[meanVal, meanVal],
             name="Mean",
-            mode="lines",
+            mode="lines+text",
+            # text="Mean",
             showlegend=False,
             marker={"color": "darkgray"},
         )
     )
     fig.layout.plot_bgcolor = "#fff"
     fig.layout.paper_bgcolor = "#fff"
+
+    fig.update_layout(
+        xaxis_title="Every two hour (2H)",
+        yaxis_title="Focus Time Rate (%)",
+    )
+    fig.update_layout(yaxis_range=[0,100])
 
     fig1 = go.Figure()
     fig1.add_trace(
