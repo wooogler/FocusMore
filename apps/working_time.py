@@ -144,7 +144,7 @@ def on_add_place(add_btn, delete_btn, place_name, places, selected_place):
 )
 def update_place_areas(selectedData, selected_place, place_areas):
     place_areas = place_areas or {}
-    if selected_place is not None and selected_place in place_areas:
+    if selected_place is not None:
         place_areas[selected_place] = selectedData
     return place_areas
 
@@ -179,10 +179,6 @@ def update_map(user_name, start_date, end_date, selected_place, place_areas):
     df_loc_files = (pd.read_csv(f) for f in loc_files)
     df_loc = pd.concat(df_loc_files, ignore_index=True)
     df_loc = df_loc.sort_values(["timestamp"])
-    min_date = date.fromtimestamp(min(df_loc["timestamp"]) / 1000).isoformat()
-    max_date = (
-        date.fromtimestamp(max(df_loc["timestamp"]) / 1000) + timedelta(days=1)
-    ).isoformat()
     df_loc = extract_df(df_loc, start_date, end_date)
 
     fig_loc = px.scatter_mapbox(
@@ -192,13 +188,19 @@ def update_map(user_name, start_date, end_date, selected_place, place_areas):
         zoom=13,
     )
     fig_loc.update_layout(mapbox_style="open-street-map")
-    fig_loc.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0}, dragmode="pan")
+    fig_loc.update_layout(
+        margin={"r": 0, "t": 0, "l": 0, "b": 0},
+        dragmode="pan",
+        modebar=dict(activecolor="red"),
+    )
     fig_loc.update_traces(selected={"marker": {"opacity": 0.2, "color": "red"}})
     selectedData = None
     if selected_place is not None and selected_place in place_areas:
         selectedData = place_areas[selected_place]
         selectedpoints = [x["pointIndex"] for x in selectedData["points"]]
         fig_loc.update_traces(selectedpoints=selectedpoints)
+
+    fig_loc["layout"]["uirevision"] = user_name
 
     return [fig_loc, selectedData]
 
@@ -390,6 +392,13 @@ def update_chart(selectedData, user_name, start_date, end_date):
     screen_on_dict = divide_time_ranges_into_date(screen_on_time_ranges)
 
     date_range = sorted(list(still_dict.keys()))
+    if len(date_range) == 0:
+        return [
+            {},
+            {},
+            {"display": "none"},
+            {"display": "none"},
+        ]
     datetime_range = pd.date_range(start=date_range[0], end=date_range[-1])
     df_daily = pd.DataFrame(
         {
