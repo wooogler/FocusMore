@@ -58,7 +58,7 @@ layout = dbc.Container(
                                     "borderRadius": "10px",
                                 },
                             ),
-                            dcc.Graph(id="appPie1", style={"maxWidth": "50vw"}),
+                            dcc.Graph(id="appPie1", style={"maxWidth": "40vw"}),
                         ]
                     )
                 ),
@@ -83,7 +83,7 @@ layout = dbc.Container(
                                     "borderRadius": "10px",
                                 },
                             ),
-                            dcc.Graph(id="appPie2", style={"maxWidth": "50vw"}),
+                            dcc.Graph(id="appPie2", style={"maxWidth": "40vw"}),
                         ]
                     )
                 ),
