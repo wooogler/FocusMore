@@ -291,7 +291,7 @@ def update_graphs(user_name, start_date, selectedDay):
 
     meanVal = ratio_df["ratio"].mean()
     ratio_df["label"] = ratio_df["ratio"].apply(
-        lambda x: "High" if x > meanVal else "Low"
+        lambda x: "Low" if x > meanVal else "High"
     )
     ratio_df = ratio_df.sort_values("timeslot")
 
