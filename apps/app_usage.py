@@ -237,9 +237,9 @@ def update_graphs(user_name, start_date, selectedDay):
         on_end = screenDf_byDay_interv.timestamp.min()
 
         for i, r in screenDf_byDay_interv.iterrows():
-            if i == screenDf_byDay_interv.index.min() and r["type"] == "SCREEN_OFF":
+            if i == screenDf_byDay_interv.index.min() and r["type"] == "SCREEN_ON":
                 on_start = s
-            elif i == screenDf_byDay_interv.index.max() and r["type"] == "SCREEN_ON":
+            elif i == screenDf_byDay_interv.index.max() and r["type"] == "SCREEN_OFF":
                 on_end = t
                 if r["hour"] in screen_times:
                     screen_times[r["hour"]].append(on_end - on_start)
@@ -249,7 +249,7 @@ def update_graphs(user_name, start_date, selectedDay):
                 break
 
             else:
-                if r["type"] == "SCREEN_ON":
+                if r["type"] == "SCREEN_OFF":
                     on_start = r.timestamp
                 else:
                     on_end = r.timestamp
@@ -291,7 +291,7 @@ def update_graphs(user_name, start_date, selectedDay):
 
     meanVal = ratio_df["ratio"].mean()
     ratio_df["label"] = ratio_df["ratio"].apply(
-        lambda x: "Low" if x > meanVal else "High"
+        lambda x: "High" if x > meanVal else "Low"
     )
     ratio_df = ratio_df.sort_values("timeslot")
 
