@@ -242,7 +242,7 @@ def ranges_to_time(ranges):
 )
 def update_chart_title(place):
     if place is None:
-        return ["", "Please select your woking places above"]
+        return ["", "Please select your working places above"]
 
     return [
         "Total time spent at {}".format(place),
