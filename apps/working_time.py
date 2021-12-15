@@ -110,9 +110,6 @@ layout = dbc.Container(
     State("place-select", "value"),
 )
 def on_add_place(add_btn, delete_btn, place_name, places, selected_place):
-    # if place_name == "" or place_name is None:
-    #     raise PreventUpdate
-
     ctx = callback_context
     if not ctx.triggered:
         raise PreventUpdate
